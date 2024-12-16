@@ -1,11 +1,11 @@
-targaet/**
+target/**
 crt/**
 logs/**
 .apt_generated
 .classpath
 .factorypath
 .project
-.setting
+.settings/**
 .springBeans
 .sts4-cahce
 .idea
