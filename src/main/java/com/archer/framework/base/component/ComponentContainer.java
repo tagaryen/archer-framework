@@ -19,13 +19,13 @@ import com.archer.framework.base.annotation.Inject;
 import com.archer.framework.base.annotation.Log;
 import com.archer.framework.base.annotation.Service;
 import com.archer.framework.base.annotation.Value;
+import com.archer.framework.base.async.AsyncPool;
 import com.archer.framework.base.conf.Conf;
 import com.archer.framework.base.exceptions.ArcherApplicationException;
 import com.archer.framework.base.logger.LoggerInitliazer;
 import com.archer.framework.base.util.ClassUtil;
 import com.archer.framework.base.util.ValueUtil;
 import com.archer.log.Logger;
-import com.archer.net.ThreadPool;
 
 public class ComponentContainer {
 	
@@ -34,7 +34,7 @@ public class ComponentContainer {
 	private List<Class<?>> classes;
 	private Conf conf;
 	
-	private ThreadPool pool;
+	private AsyncPool pool;
 
 	private LoggerInitliazer logIniter;
 	private Logger log;
@@ -47,7 +47,7 @@ public class ComponentContainer {
 
 		this.logIniter = logIniter;
 		this.log = logIniter.newLogger();
-		this.pool = new ThreadPool(2);
+		this.pool = new AsyncPool(2);
 		
 		putComponent(getClass().getName(), this);
 	}
