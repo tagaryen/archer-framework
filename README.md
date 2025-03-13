@@ -1,8 +1,17 @@
 # archer-framework 
-A lightweight spring-boot-like framework. 
+A fast spring-boot-like framework. 
+
+maven:
+``` maven
+        <dependency>
+            <groupId>io.github.tagaryen</groupId>  
+            <artifactId>archer-framework</artifactId>  
+            <version>1.1.0</version>  
+        </dependency>  
+```
 
 ## demos
-see src/demos
+see src/test/java/com/archer/test/run
 
 ## todo-list 
 1. add data source like mysql, h2, etc.  

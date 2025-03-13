@@ -17,6 +17,9 @@ public class ArcherConfig {
 	@Value(id = "archer.http.host", defaultVal = "127.0.0.1")
 	String host;
 
+	@Value(id = "archer.http.threadNum", defaultVal = "0")
+	int threadNum;
+
 	@Log
 	Logger log;
 	
@@ -25,7 +28,7 @@ public class ArcherConfig {
 	
 	@ConfigComponent
 	public Archer initArcher() {
-		Archer archer = new Archer();
+		Archer archer = new Archer().setThreadNum(threadNum);
 		try {
 			archer.listen(host, port, handler);
 			log.info("Archer Server started on {}", port);

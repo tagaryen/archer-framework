@@ -77,7 +77,7 @@ public class ParamReflectUtil {
 			if(chars.length != 1) {
 				throw new TypeException("can not parse " + val + " to char.");
 			}
-			return new Character(chars[0]);
+			return Character.valueOf(chars[0]);
 		}
 		if(cls.equals(Integer.class)) {
 			return Integer.valueOf(val);

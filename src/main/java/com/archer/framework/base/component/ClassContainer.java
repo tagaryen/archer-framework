@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.net.URL;
-import java.net.URLClassLoader;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.LinkedList;
@@ -20,6 +20,7 @@ import com.archer.framework.base.conf.Conf;
 import com.archer.framework.base.exceptions.ArcherApplicationException;
 import com.archer.framework.base.logger.LoggerInitliazer;
 import com.archer.framework.base.timer.Timer;
+import com.archer.tools.java.PathUtil;
 
 public class ClassContainer {
 	
@@ -46,25 +47,61 @@ public class ClassContainer {
 	}
 	
 	private List<Class<?>> listAllClasses() {
+		PathUtil.getCurrentWorkDir();
 		List<Class<?>> classes = new LinkedList<>();
-		ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-        if (classLoader instanceof URLClassLoader) {
-            URL[] urls = ((URLClassLoader) classLoader).getURLs();
-            for (URL url : urls) {
-            	String path = url.getPath();
-            	try {
-                	if(new File(path).isDirectory()) {
-                		classes.addAll(getClassesFromPath(path, null));
-                	} else if(path.endsWith(".jar")) {
-                		classes.addAll(getClassesFromJar(path));
-                	}
-            	} catch(Exception ignore) {}
-            }
+		URL[] urls = getClassPathURL();
+        for (URL url : urls) {
+        	String path = url.getPath();
+        	try {
+            	if(new File(path).isDirectory()) {
+            		classes.addAll(getClassesFromPath(path, null));
+            	} else if(path.endsWith(".jar")) {
+            		classes.addAll(getClassesFromJar(path));
+            	}
+        	} catch(Exception ignore) {}
         }
         
         return classes;
 	}
 
+	private URL[] getClassPathURL() {
+        String cp = System.getProperty("java.class.path");
+		ArrayList<URL> path = new ArrayList<>();
+        int off = 0, next = -1;
+        do {
+        	try {
+                next = cp.indexOf(File.pathSeparator, off);
+                String element = (next == -1)
+                    ? cp.substring(off)
+                    : cp.substring(off, next);
+                if (!element.isEmpty()) {
+                	File file = new File(element).getCanonicalFile();
+                    String filepath = file.getAbsolutePath();
+                    if (!filepath.startsWith("/")) {
+                    	filepath = "/" + filepath;
+                    }
+                    if (!filepath.endsWith("/") && file.isDirectory()) {
+                    	filepath = filepath + "/";
+                    }
+                    URL url = new URL("file", "", filepath);
+                    if (url != null) {
+                    	path.add(url);
+                    }
+                }
+                off = next + 1;
+        	} catch(Exception e) {
+        		e.printStackTrace();
+        	}
+        } while (next != -1);
+
+        int size = path.size();
+        ArrayDeque<URL> unopenedUrls = new ArrayDeque<>(size);
+        for (int i = 0; i < size; i++) {
+            unopenedUrls.add(path.get(i));
+        }
+        return path.toArray(new URL[0]);
+	}
+	
 	private List<Class<?>> getClassesFromPath(String path, String parentPkg) {
         List<Class<?>> classes = new ArrayList<>();
         File directory = new File(path);

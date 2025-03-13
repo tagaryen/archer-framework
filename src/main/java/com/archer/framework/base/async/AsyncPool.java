@@ -66,7 +66,11 @@ public class AsyncPool {
 					
 					continue ;
 				}
-				task.run();
+				try {
+					task.run();
+				} catch(Exception e) {
+					e.printStackTrace();
+				}
 			}
 	    }
 	}

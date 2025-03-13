@@ -77,11 +77,7 @@ public class ComponentContainer {
 		for(Class<?> cls: classes) {
 			Config config = cls.getAnnotation(Config.class);
 			if(config != null) {
-				try {
-					confInstances.add(cls.newInstance());
-				} catch (InstantiationException | IllegalAccessException e) {
-					throw new ArcherApplicationException("can not construct instance of '" + cls.getName() + "'");
-				}
+				confInstances.add(ClassUtil.newInstance(cls));
 				continue;
 			}
 			
@@ -89,13 +85,9 @@ public class ComponentContainer {
 			Controller c = cls.getAnnotation(Controller.class);
 			if(c != null) {
 				Object ins = null;
-				try {
-					ins = cls.newInstance();
-					putComponent(cls.getName(), ins);
-					this.controllers.add(ins);
-				} catch (InstantiationException | IllegalAccessException e) {
-					throw new ArcherApplicationException("can not construct instance of '" + cls.getName() + "'");
-				}
+				ins = ClassUtil.newInstance(cls);
+				putComponent(cls.getName(), ins);
+				this.controllers.add(ins);
 				continue;
 			}
 			
@@ -209,9 +201,11 @@ public class ComponentContainer {
 				Value val = f.getAnnotation(Value.class);
 				if(val != null) {
 					try {
-						if(!ValueUtil.setValue(f, conf, cop, val.id(), val.defaultVal().isEmpty() ? null : val.defaultVal())) {
-							throw new ArcherApplicationException("can not found Value '" + val.id() + 
-									"' at '" + cwp.getCls() + "." + f.getName() + "'");
+						if(!val.defaultVal().isEmpty()) {
+							if(!ValueUtil.setValue(f, conf, cop, val.id(), val.defaultVal())) {
+								throw new ArcherApplicationException("can not found Value '" + val.id() + 
+										"' at '" + cwp.getCls() + "." + f.getName() + "'");
+							}
 						}
 					} catch (Exception e) {
 						throw new ArcherApplicationException("can not set Value '" + conf.getString(val.id()) + "' to '" + 

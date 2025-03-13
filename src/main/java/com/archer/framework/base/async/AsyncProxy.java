@@ -19,6 +19,7 @@ import com.archer.tools.bytecode.constantpool.ConstantMemberRef;
 import com.archer.tools.bytecode.constantpool.ConstantNameAndType;
 import com.archer.tools.bytecode.constantpool.ConstantPool;
 import com.archer.tools.bytecode.constantpool.ConstantUtf8;
+import com.archer.tools.bytecode.util.DescriptorUtil;
 
 
 public class AsyncProxy {
@@ -37,21 +38,27 @@ public class AsyncProxy {
 	
 	private ClassBytecode superCls;
 	private String superClassName;
+	private String superRawClassName;
 	private MemberInfo[] superMethods;
 	private ConstantInfo[] supercp;
 	private String className;
-	private String classTypeName;
+	private String rawClassName;
+	private String classDesc;
 	private String taskClassName;
+	private String rawTaskClassName;
 	
 	
 	public AsyncProxy(ClassBytecode superCls) {
 		this.superCls = superCls;
 		this.superClassName = superCls.getClassName();
+		this.superRawClassName = DescriptorUtil.replaceDot2Slash(this.superClassName);
 		this.superMethods = superCls.getMethods();
 		this.supercp = superCls.getConstantPool().getCpInfo();
 		this.className = superClassName + "$ArcherProxy";
-		this.classTypeName = "L"+this.className+";";
+		this.rawClassName = DescriptorUtil.replaceDot2Slash(this.className);
+		this.classDesc = "L"+this.rawClassName+";";
 		this.taskClassName = superClassName + "$ArcherTask";
+		this.rawTaskClassName = DescriptorUtil.replaceDot2Slash(this.taskClassName);
 	}
 	
 	public Class<?> newAsyncClass() {
@@ -82,10 +89,9 @@ public class AsyncProxy {
 		if(overrideMethods.length != overrideMethodDescs.length) {
 			throw new IllegalArgumentException("the number of overrideMethods and overrideMethodDescs must equal");
 		}
-		String simpleClassName = className.substring(className.lastIndexOf('/')+1);
 		
 		ClassBytecode newcls = new ClassBytecode();
-		newcls.setClassName(className.replaceAll("/", "."));
+		newcls.setClassName(className);
 		newcls.setMagic(superCls.getMagic());
 		newcls.setMinorVersion(superCls.getMinorVersion());
 		newcls.setMajorVersion(superCls.getMajorVersion());
@@ -106,8 +112,8 @@ public class AsyncProxy {
 		constants[index++] = clazzInfo;
 		
 		ConstantUtf8 clazzUtf8Info = new ConstantUtf8();
-		clazzUtf8Info.setValue(className);
-		nameIndexMap.put(className, index);
+		clazzUtf8Info.setValue(this.rawClassName);
+		nameIndexMap.put(rawClassName, index);
 		constants[index++] = clazzUtf8Info;
 		
 		int superClassIndex = index;
@@ -116,8 +122,8 @@ public class AsyncProxy {
 		constants[index++] = superInfo;
 		
 		ConstantUtf8 superUtf8Info = new ConstantUtf8();
-		superUtf8Info.setValue(superClassName);
-		nameIndexMap.put(superClassName, index);
+		superUtf8Info.setValue(this.superRawClassName);
+		nameIndexMap.put(superRawClassName, index);
 		constants[index++] = superUtf8Info;
 		
 		ConstantUtf8 poolUtf8 = new ConstantUtf8();
@@ -164,8 +170,8 @@ public class AsyncProxy {
 		
 
 		ConstantUtf8 thiType = new ConstantUtf8();
-		thiType.setValue(classTypeName);
-		nameIndexMap.put(classTypeName, index);
+		thiType.setValue(classDesc);
+		nameIndexMap.put(classDesc, index);
 		constants[index++] = thiType;
 		
 		int consIndex = index;
@@ -253,13 +259,13 @@ public class AsyncProxy {
 				
 
 				int[][] localVarArr = new int[args.length + 1][];
-				localVarArr[0] = new int[] {0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get(classTypeName), 0};
+				localVarArr[0] = new int[] {0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get(classDesc), 0};
 				for(int j = 1; j < localVarArr.length; j++) {
 					localVarArr[j] = new int[] {0, codeLength, nameIndexMap.get("p" + (j-1)), nameIndexMap.get(args[j-1]), j};
 				}
 				
 				int stacks = args.length + 1;
-				MemberInfo init = generateMethod(nameIndexMap, classTypeName, m.getName(), m.getDesc(), args, stacks, stacks, cattCode, lineIndex, 1, 4, localVarArr);
+				MemberInfo init = generateMethod(nameIndexMap, classDesc, m.getName(), m.getDesc(), args, stacks, stacks, cattCode, lineIndex, 1, 4, localVarArr);
 				lineIndex += 4;
 				methods[methodOff++] = init;
 			}
@@ -317,7 +323,7 @@ public class AsyncProxy {
 			constants[index++] = taskClass;
 
 			ConstantUtf8 taskClassNameUtf8 = new ConstantUtf8();
-			taskClassNameUtf8.setValue(taskClassName + innerClassOff);
+			taskClassNameUtf8.setValue(rawTaskClassName + innerClassOff);
 			nameIndexMap.put(taskClassNameUtf8.getValue(), index);
 			constants[index++] = taskClassNameUtf8;
 
@@ -333,7 +339,7 @@ public class AsyncProxy {
 			constants[index++] = taskType;
 			
 			
-			String taskParamTypeName = "(L"+className+";";
+			String taskParamTypeName = "("+this.classDesc;
 			for(String arg: args) {
 				taskParamTypeName += arg;
 			}
@@ -450,13 +456,13 @@ public class AsyncProxy {
 				cattCode[opIndex++] = InstructionTable.getInstructionCode("return");
 				
 				int[][] localVarArr = new int[args.length + 1][];
-				localVarArr[0] = new int[] {0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get(classTypeName), 0};
+				localVarArr[0] = new int[] {0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get(classDesc), 0};
 				for(int j = 1; j < localVarArr.length; j++) {
 					localVarArr[j] = new int[] {0, codeLength, nameIndexMap.get("p" + (j-1)), nameIndexMap.get(args[j-1]), j};
 				}
 				
 				int stacks = args.length + 4, locals = args.length + 1;
-				MemberInfo method = generateMethod(nameIndexMap, classTypeName, methodName, methodDesc, args, stacks, locals, cattCode, lineIndex, 5, 8, localVarArr);
+				MemberInfo method = generateMethod(nameIndexMap, classDesc, methodName, methodDesc, args, stacks, locals, cattCode, lineIndex, 5, 8, localVarArr);
 				lineIndex += 8;
 				methods[methodOff++] = method;
 			}
@@ -491,19 +497,18 @@ public class AsyncProxy {
 				cattCode[opIndex++] = InstructionTable.getInstructionCode("return");
 
 				int[][] localVarArr = new int[args.length + 1][];
-				localVarArr[0] = new int[] {0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get(classTypeName), 0};
+				localVarArr[0] = new int[] {0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get(classDesc), 0};
 				for(int j = 1; j < localVarArr.length; j++) {
 					localVarArr[j] = new int[] {0, codeLength, nameIndexMap.get("p" + (j-1)), nameIndexMap.get(args[j-1]), j};
 				}
 				
 				int stacks = args.length + 1, locals = args.length + 1;
-				MemberInfo method = generateMethod(nameIndexMap, classTypeName, superOverName, methodDesc, args, stacks, locals, cattCode, lineIndex, 1, 4, localVarArr);
+				MemberInfo method = generateMethod(nameIndexMap, classDesc, superOverName, methodDesc, args, stacks, locals, cattCode, lineIndex, 1, 4, localVarArr);
 				lineIndex += 4;
 				methods[methodOff++] = method;
 			}
 		}
 		newcls.setMethods(Arrays.copyOfRange(methods, 0, methodOff));
-		newcls.setMethodCount(newcls.getMethods().length);
 		
 		MemberInfo[] fields = new MemberInfo[1];
 		fields[0] = new MemberInfo();
@@ -512,9 +517,7 @@ public class AsyncProxy {
 		fields[0].setAccessFlags(Modifier.PROTECTED);
 		fields[0].setNameIndex(nameIndexMap.get(POOL_NAME));
 		fields[0].setDescriptorIndex(nameIndexMap.get(THREADPOOL_TYPE));
-		fields[0].setAttributesCount(0);
 		fields[0].setAttributes(new AttributeInfo[0]);
-		newcls.setFieldCount(1);
 		newcls.setFields(fields);
 
 		int sourceIndex = index;
@@ -524,7 +527,7 @@ public class AsyncProxy {
 
 		int sourceNameIndex = index;
 		ConstantUtf8 sourceName = new ConstantUtf8();
-		sourceName.setValue(simpleClassName+".java");
+		sourceName.setValue(newcls.getSimpleName()+".java");
 		constants[index++] = sourceName;
 
 		int innerClassRawNameIndex = index;
@@ -555,18 +558,16 @@ public class AsyncProxy {
 			}
 		}
 		newcls.setClassEnd(end);
-		
 		return newcls;
 	}
 	
-	private ClassBytecode generateAsyncTask(String curClsName, String methodName, String methodDesc) {
+	private ClassBytecode generateAsyncTask(String curclsName, String methodName, String methodDesc) {
 
 		String superOverMethodName = generateSuperOverMethodName(methodName);
-		String simpleClassName = curClsName.substring(curClsName.lastIndexOf('/')+1);
 		String[] args = parseMethodDesc(methodDesc);
 		
 		ClassBytecode newcls = new ClassBytecode();
-		newcls.setClassName(curClsName.replaceAll("/", "."));
+		newcls.setClassName(curclsName);
 		newcls.setMagic(superCls.getMagic());
 		newcls.setMinorVersion(superCls.getMinorVersion());
 		newcls.setMajorVersion(superCls.getMajorVersion());
@@ -585,12 +586,11 @@ public class AsyncProxy {
 		
 		ConstantClass clazzInfo = new ConstantClass();
 		clazzInfo.setNameIndex(2);
-		classIndexMap.put(curClsName, index);
+		classIndexMap.put(newcls.getRawClassName(), index);
 		constants[index++] = clazzInfo;
 		
 		ConstantUtf8 clazzUtf8Info = new ConstantUtf8();
-		clazzUtf8Info.setValue(curClsName);
-		nameIndexMap.put(curClsName, index);
+		clazzUtf8Info.setValue(newcls.getRawClassName());
 		constants[index++] = clazzUtf8Info;
 
 		ConstantClass objectInfo = new ConstantClass();
@@ -600,7 +600,6 @@ public class AsyncProxy {
 		
 		ConstantUtf8 objectUtf8Info = new ConstantUtf8();
 		objectUtf8Info.setValue(OBJECT_CLASS);
-		nameIndexMap.put(OBJECT_CLASS, index);
 		constants[index++] = objectUtf8Info;
 		
 		ConstantClass superInfo = new ConstantClass();
@@ -610,39 +609,40 @@ public class AsyncProxy {
 		
 		ConstantUtf8 superUtf8Info = new ConstantUtf8();
 		superUtf8Info.setValue(SUBMIT_TASK_CLASS);
-		nameIndexMap.put(SUBMIT_TASK_CLASS, index);
 		constants[index++] = superUtf8Info;
 		
-
+		
 		ConstantUtf8 curClassTypeName = new ConstantUtf8();
-		curClassTypeName.setValue("L"+curClsName+";");
-		nameIndexMap.put(curClassTypeName.getValue(), index);
+		curClassTypeName.setValue("L"+newcls.getRawClassName()+";");
+		nameIndexMap.put("L"+newcls.getRawClassName()+";", index);
 		constants[index++] = curClassTypeName;
 		
+		int taskFieldNameIndex = index;
 		ConstantUtf8 fieldUtf8 = new ConstantUtf8();
 		fieldUtf8.setValue(TASK_FIELD_NAME);
 		nameIndexMap.put(TASK_FIELD_NAME, index);
 		constants[index++] = fieldUtf8;
 		
+		int rawClassNameIndex = index;
 		ConstantUtf8 fieldClsUtf8 = new ConstantUtf8();
-		fieldClsUtf8.setValue(className);
-		nameIndexMap.put(className, index);
+		fieldClsUtf8.setValue(rawClassName);
 		constants[index++] = fieldClsUtf8;
 
+		int taskFieldDescIndex = index;
 		ConstantUtf8 fieldClsTypeUtf8 = new ConstantUtf8();
-		fieldClsTypeUtf8.setValue(classTypeName);
-		nameIndexMap.put(classTypeName, index);
+		fieldClsTypeUtf8.setValue(classDesc);
+		nameIndexMap.put(classDesc, index);
 		constants[index++] = fieldClsTypeUtf8;
 		
 		ConstantMemberRef fieldRef = new ConstantMemberRef(ConstantInfo.CONSTANT_Fieldref);
-		fieldRef.setClassIndex( 1);
-		fieldRef.setNameAndTypeIndex( index + 1);
+		fieldRef.setClassIndex(1);
+		fieldRef.setNameAndTypeIndex(index + 1);
 		fieldIndexMap.put(TASK_FIELD_NAME, index);
 		constants[index++] = fieldRef;
 		
 		ConstantNameAndType fieldNameType = new ConstantNameAndType();
-		fieldNameType.setNameIndex(nameIndexMap.get(TASK_FIELD_NAME));
-		fieldNameType.setDescIndex(nameIndexMap.get(classTypeName));
+		fieldNameType.setNameIndex(taskFieldNameIndex);
+		fieldNameType.setDescIndex(taskFieldDescIndex);
 		constants[index++] = fieldNameType;
 		
 		int p = 0;
@@ -675,12 +675,13 @@ public class AsyncProxy {
 		}
 		
 		//define $ArcherTask1.<init>(args) utf8
+		int initConsNameIndex = index;
 		ConstantUtf8 consName = new ConstantUtf8();
 		consName.setValue("<init>");
 		nameIndexMap.put("<init>", index);
 		constants[index++] = consName;
 
-		String consDescStr = "(" + classTypeName;
+		String consDescStr = "(" + classDesc;
 		for(String arg: args) {
 			consDescStr += arg;
 		}
@@ -697,13 +698,13 @@ public class AsyncProxy {
 
 		int callSuperIndex = index;
 		ConstantMemberRef callSuperRef = new ConstantMemberRef(ConstantInfo.CONSTANT_Methodref);
-		callSuperRef.setClassIndex( 3);
-		callSuperRef.setNameAndTypeIndex( index + 1);
+		callSuperRef.setClassIndex(3);
+		callSuperRef.setNameAndTypeIndex(index + 1);
 		constants[index++] = callSuperRef;
 
 		ConstantNameAndType superCallnt = new ConstantNameAndType();
-		superCallnt.setNameIndex(nameIndexMap.get("<init>"));
-		superCallnt.setDescIndex( nameIndexMap.get("()V"));
+		superCallnt.setNameIndex(initConsNameIndex);
+		superCallnt.setDescIndex(index - 2);
 		constants[index++] = superCallnt;
 
 		ConstantUtf8 insCallName = new ConstantUtf8();
@@ -713,8 +714,8 @@ public class AsyncProxy {
 		
 		// define $impl.super$call(args)
 		ConstantClass insCallClass = new ConstantClass();
-		insCallClass.setNameIndex(nameIndexMap.get(className));
-		classIndexMap.put(className, index);
+		insCallClass.setNameIndex(rawClassNameIndex);
+		classIndexMap.put(rawClassName, index);
 		constants[index++] = insCallClass;
 		
 		int insCallmIndex = index;
@@ -768,14 +769,12 @@ public class AsyncProxy {
 		
 
 		ConstantUtf8 thiType = new ConstantUtf8();
-		thiType.setValue("L"+curClsName+";");
+		thiType.setValue("L"+newcls.getRawClassName()+";");
 		nameIndexMap.put(thiType.getValue(), index);
 		constants[index++] = thiType;
 		
 		
 		MemberInfo[] methods = new MemberInfo[2];
-		newcls.setMethodCount(2);
-		newcls.setMethods(methods);
 		int lineIndex = 12 + args.length * 2;
 		
 		/**
@@ -793,6 +792,10 @@ public class AsyncProxy {
 			}
 			byte[] cattCode = new byte[codeLength];
 			int opIndex = 0;
+			cattCode[opIndex++] = InstructionTable.getInstructionCode("aload_0");
+			cattCode[opIndex++] = InstructionTable.getInstructionCode("invokespecial");
+			cattCode[opIndex++] = (byte) ((callSuperIndex >> 8) & 0xff);
+			cattCode[opIndex++] = (byte) (callSuperIndex & 0xff);
 			cattCode[opIndex++] = InstructionTable.getInstructionCode("aload_0");
 			cattCode[opIndex++] = InstructionTable.getInstructionCode("aload_1");
 			cattCode[opIndex++] = InstructionTable.getInstructionCode("putfield");
@@ -815,16 +818,12 @@ public class AsyncProxy {
 				cattCode[opIndex++] = (byte) (fIndex & 0xff);
 				
 			}
-			cattCode[opIndex++] = InstructionTable.getInstructionCode("aload_0");
-			cattCode[opIndex++] = InstructionTable.getInstructionCode("invokespecial");
-			cattCode[opIndex++] = (byte) ((callSuperIndex >> 8) & 0xff);
-			cattCode[opIndex++] = (byte) (callSuperIndex & 0xff);
 			cattCode[opIndex++] = InstructionTable.getInstructionCode("return");
 
-			int[][] localVarArr = {{0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get("L"+curClsName+";"), 0}};
+			int[][] localVarArr = {{0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get("L"+newcls.getRawClassName()+";"), 0}};
 			
 			int stacks = 2, locals = args.length + 2;
-			methods[0] = generateMethod(nameIndexMap, "L"+curClsName+";", "<init>", consDescStr , args, stacks, locals, cattCode, lineIndex, args.length + 1, args.length + 3, localVarArr);
+			methods[0] = generateMethod(nameIndexMap, "L"+newcls.getRawClassName()+";", "<init>", consDescStr , args, stacks, locals, cattCode, lineIndex, args.length + 1, args.length + 3, localVarArr);
 			lineIndex += args.length + 3;
 		}
 		
@@ -854,24 +853,21 @@ public class AsyncProxy {
 			cattCode[opIndex++] = (byte) (insCallmIndex & 0xff);
 			cattCode[opIndex++] = InstructionTable.getInstructionCode("return");
 
-			int[][] localVarArr = {{0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get("L"+curClsName+";"), 0}};
+			int[][] localVarArr = {{0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get("L"+newcls.getRawClassName()+";"), 0}};
 			
 			int stacks = 2, locals = 1;
-			methods[1] = generateMethod(nameIndexMap, "L"+curClsName+";", "run", "()V" , args, stacks, locals, cattCode, lineIndex, args.length + 1, args.length + 3, localVarArr);
+			methods[1] = generateMethod(nameIndexMap, "L"+newcls.getRawClassName()+";", "run", "()V" , args, stacks, locals, cattCode, lineIndex, args.length + 1, args.length + 3, localVarArr);
 		}
 		
 
 		MemberInfo[] fields = new MemberInfo[args.length + 1];
-		newcls.setFieldCount(args.length + 1);
-		newcls.setFields(fields);
 		
 		fields[0] = new MemberInfo();
 		fields[0].setName(TASK_FIELD_NAME);
-		fields[0].setDesc(className);
+		fields[0].setDesc(classDesc);
 		fields[0].setAccessFlags(Modifier.PROTECTED);
 		fields[0].setNameIndex(nameIndexMap.get(TASK_FIELD_NAME));
-		fields[0].setDescriptorIndex(nameIndexMap.get(classTypeName));
-		fields[0].setAttributesCount(0);
+		fields[0].setDescriptorIndex(nameIndexMap.get(classDesc));
 		fields[0].setAttributes(new AttributeInfo[0]);
 		for(int i = 0; i < args.length; i++) {
 			String name = "p" + i;
@@ -881,7 +877,6 @@ public class AsyncProxy {
 			fields[i + 1].setAccessFlags(Modifier.PROTECTED);
 			fields[i + 1].setNameIndex(nameIndexMap.get(name));
 			fields[i + 1].setDescriptorIndex(nameIndexMap.get(args[i]));
-			fields[i + 1].setAttributesCount(0);
 			fields[i + 1].setAttributes(new AttributeInfo[0]);
 		}
 		
@@ -892,12 +887,8 @@ public class AsyncProxy {
 
 		int sourceNameIndex = index;
 		ConstantUtf8 sourceName = new ConstantUtf8();
-		sourceName.setValue(simpleClassName+".java");
+		sourceName.setValue(newcls.getSimpleName()+".java");
 		constants[index++] = sourceName;
-
-		ConstantUtf8 enclosingMethodName = new ConstantUtf8();
-		enclosingMethodName.setValue("EnclosingMethod");
-		constants[index++] = enclosingMethodName;
 
 		int innerClassRawNameIndex = index;
 		ConstantUtf8 innerClass = new ConstantUtf8();
@@ -908,6 +899,9 @@ public class AsyncProxy {
 		cp.setCpInfo(Arrays.copyOfRange(constants, 0, index));
 		cp.setConstantPoolCount(cp.getCpInfo().length);
 		newcls.setConstantPool(cp);
+
+		newcls.setFields(fields);
+		newcls.setMethods(methods);
 		
 		ClassEnd end = new ClassEnd();
 		end.setSourceLen(2);
@@ -924,7 +918,6 @@ public class AsyncProxy {
 		innerClassTable[0][2] = 0;
 		newcls.setClassEnd(end);
 		
-		
 		return newcls;
 	}
 	
@@ -937,7 +930,6 @@ public class AsyncProxy {
 		method.setAccessFlags(Modifier.PUBLIC);
 		method.setNameIndex(nameIndexMap.get(name));
 		method.setDescriptorIndex(nameIndexMap.get(desc));
-		method.setAttributesCount(1);
 		AttributeInfo[] mattr = new AttributeInfo[1];
 		method.setAttributes(mattr);
 
@@ -947,11 +939,8 @@ public class AsyncProxy {
 		catt.setNameIndex(nameIndexMap.get("Code"));
 		catt.setMaxStack(stacks);
 		catt.setMaxLocals(locals);
-		catt.setCodeLength(cattCode.length);
 		catt.setCode(cattCode);
-		catt.setExcepetionTableLength(0);
 		catt.setException(new byte[] {});
-		catt.setAttributesCount(2);
 		catt.setLength(20 + catt.getCodeLength());
 		AttributeInfo[] cattAttr = new AttributeInfo[2];
 		catt.setAttributes(cattAttr);
