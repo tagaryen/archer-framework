@@ -37,11 +37,20 @@ public class MySQLExecutor {
 		}
 		List<T> results = new ArrayList<>(128);
 		while(result.next()) {
-			for(int i = 1; i < columns.length; i++) {
-				results.add(cref.newInstanceAndSetColumns(columns, result, cls));
-			}
+			results.add(cref.newInstanceAndSetColumns(columns, result, cls));
 		}
     	return results;
+    }
+    
+    public <T> T queryOne(String sql, Class<T> cls) throws SQLException {
+		List<T> results = query(sql, cls);
+		if(results.size() > 1) {
+			throw new SQLException("found " + results.size() + " results while only one is required");
+		}
+		if(results.size() == 0) {
+			return null;
+		}
+    	return results.get(0);
     }
     
     public void execute(String sql) throws SQLException {

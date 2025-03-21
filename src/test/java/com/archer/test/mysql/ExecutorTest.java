@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.archer.framework.datasource.mysql.MySQLConfig;
 import com.archer.framework.datasource.mysql.MySQLExecutor;
+import com.archer.test.run.SqlEntity;
 
 public class ExecutorTest {
 	public static void main(String[] args) {
@@ -14,7 +15,7 @@ public class ExecutorTest {
     		config.setUser("secret");
     		config.setPwd("secret_test");
     		MySQLExecutor exe = new MySQLExecutor(config);
-    		List<SqlEntity> entities = exe.query("select * from sqltest", SqlEntity.class);
+    		List<SqlEntity> entities = exe.query("select * from sqltest limit 1", SqlEntity.class);
     		for(SqlEntity en: entities) {
     			System.out.println(en.getColumnG() + ",   " + en.getColumnH() + ",  " + en.getColumnI());
     		}

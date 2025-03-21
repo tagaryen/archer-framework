@@ -18,4 +18,10 @@ archer:
     log-path: logs # logfiles will save at ${workspace}/logs/
     file-name: archer-log 
 
+  datasource: 
+    mysql:
+      enabled: true 
+      url: jdbc:mysql://10.32.122.173:4406/node2?characterEncoding=UTF-8&serverTimezong=Asia/Shanghai
+      user: secret
+      pwd: secret_test
 

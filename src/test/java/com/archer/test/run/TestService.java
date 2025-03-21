@@ -3,10 +3,14 @@ package com.archer.test.run;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.SQLException;
+import java.util.List;
 
 import com.archer.framework.base.annotation.Async;
+import com.archer.framework.base.annotation.Inject;
 import com.archer.framework.base.annotation.Log;
 import com.archer.framework.base.annotation.Service;
+import com.archer.framework.datasource.mysql.MySQLExecutor;
 import com.archer.log.Logger;
 
 @Service
@@ -14,6 +18,9 @@ public class TestService implements TestServiceInter {
 	
 	@Log
 	Logger log;
+	
+	@Inject
+	MySQLExecutor mysql;
 
 	public ResponseVO test(String id, String pathVar, RequestVO vo) {
 		log.info("get in service test1, id = {}, vo = {}", id, (vo == null?"null":vo));
@@ -21,9 +28,17 @@ public class TestService implements TestServiceInter {
 		test3(pathVar);
 		
 		ResponseVO res = new ResponseVO();
-		res.id = id;
-		res.pathVar = pathVar;
-		res.req = vo.req;
+		try {
+			SqlEntity entity = mysql.queryOne("select * from sqltest limit 1", SqlEntity.class);
+			res.id = entity.getColumnI().toString();
+			res.pathVar = entity.getColumnE();
+			res.req = vo.req;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			res.id = id;
+			res.pathVar = pathVar;
+			res.req = vo.req;
+		}
 		return res;
 	}
 	

@@ -20,6 +20,7 @@ import com.archer.framework.base.conf.Conf;
 import com.archer.framework.base.exceptions.ArcherApplicationException;
 import com.archer.framework.base.logger.LoggerInitliazer;
 import com.archer.framework.base.timer.Timer;
+import com.archer.framework.web.Archer;
 import com.archer.tools.java.PathUtil;
 
 public class ClassContainer {
@@ -41,9 +42,21 @@ public class ClassContainer {
 	}
 	
 	public void loadComponents() {
-		components.loadForwardComponents();
-		components.loadAllComponents();
+		try {
+			components.loadForwardComponents();
+			components.loadAllComponents();
+		} catch(Exception e) {
+			stopComponents();
+			throw e;
+		}
 		components.logger().info("Archer Application started in {}ms", timer.calculateCost());
+	}
+	
+	public void stopComponents() {
+		Archer archer = (Archer) components.getComponent(Archer.class);
+		if(archer != null) {
+			archer.destroy();
+		}
 	}
 	
 	private List<Class<?>> listAllClasses() {

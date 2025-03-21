@@ -13,7 +13,6 @@ public class ArcherApplication {
 			System.out.println("paltform " + System.getProperty("os.name") + " is not supported.");
 			System.exit(0);
 		}
-		
 		Conf conf  = ConfLoader.load();
 		ClassContainer classes = new ClassContainer(conf);
 		classes.loadComponents();

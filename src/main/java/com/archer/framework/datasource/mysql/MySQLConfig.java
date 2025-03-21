@@ -11,7 +11,7 @@ import com.archer.log.Logger;
 @Config
 public class MySQLConfig {
 
-	@Value(id = "archer.datasource.mysql.enabled")
+	@Value(id = "archer.datasource.mysql.enabled", defaultVal = "true")
 	private boolean enabled;
 	
 	@Value(id = "archer.datasource.mysql.url")
@@ -58,12 +58,9 @@ public class MySQLConfig {
 		this.pwd = pwd;
 	}
 	
-	@ConfigComponent
+	@ConfigComponent(enabled = "archer.datasource.mysql.enabled")
 	public MySQLExecutor initMySQLExecutor() throws SQLException {
-		if(enabled) {
-			log.info("connect to mysql {}", url);
-			return new MySQLExecutor(this);
-		}
-		return null;
+		log.info("connect to mysql {}", url);
+		return new MySQLExecutor(this);
 	}
 }

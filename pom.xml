@@ -4,7 +4,7 @@
 
   <groupId>io.github.tagaryen</groupId>
   <artifactId>archer-framework</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.2</version>
   <description>
     Fast Spring-like framework. 
     Contact: tagaryen199@126.com
@@ -47,7 +47,7 @@
   	<dependency>
 	    <groupId>io.github.tagaryen</groupId>
 	    <artifactId>archer-tools</artifactId>
-	    <version>1.2.12</version>
+	    <version>1.2.13</version>
 	</dependency>
   	<dependency>
 	  <groupId>io.github.tagaryen</groupId>

@@ -9,4 +9,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ConfigComponent {
 	String name() default "";
+	String enabled() default "";
 }

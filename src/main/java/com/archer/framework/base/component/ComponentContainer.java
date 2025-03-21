@@ -271,6 +271,9 @@ public class ComponentContainer {
 		for(Method m: methods) {
 			ConfigComponent cop = m.getAnnotation(ConfigComponent.class);
 			if(cop != null) {
+				if(!cop.enabled().isEmpty() && !conf.getBoolean(cop.enabled())) {
+					continue;
+				}
 				String name = cop.name().isEmpty() ? m.getReturnType().getName() : cop.name();
 				try {
 					m.setAccessible(true);
@@ -289,7 +292,7 @@ public class ComponentContainer {
 			Object dep = getComponent(uncop.getName());
 			if(dep == null) {
 				throw new ArcherApplicationException("can not found Component of type '" + uncop.getName() + 
-						"' at '" + uncop.getIns().getClass().getName() + "." + uncop.getF().getName() +"'");
+						"' at '" + uncop.getIns().getCls().getName() + "." + uncop.getF().getName() +"'");
 			}
 			try {
 				uncop.getF().setAccessible(true);
