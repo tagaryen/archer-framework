@@ -162,7 +162,7 @@ public class ComponentContainer {
 	private List<UnknownComponent> injectKnownComponents() {
 		List<UnknownComponent> unknownComponents = new LinkedList<>();
 		for(ContainerInstance cwp: components.values()) {
-			Field[] fields = cwp.getCls().getDeclaredFields();
+			Field[] fields = cwp.getFields();
 			Object cop = cwp.getInstance();
 			for(Field f: fields) {
 				f.setAccessible(true);
@@ -180,7 +180,6 @@ public class ComponentContainer {
 					}
 					continue ;
 				}
-				
 				Inject inj = f.getAnnotation(Inject.class);
 				if(inj != null) {
 					String name = inj.name().isEmpty() ? f.getType().getName() : inj.name();

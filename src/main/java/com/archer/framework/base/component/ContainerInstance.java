@@ -1,6 +1,7 @@
 package com.archer.framework.base.component;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Parameter;
 import java.util.Map;
 
@@ -22,10 +23,11 @@ public class ContainerInstance {
 	private boolean proxy;
 
 	private Class<?> proxyClass;
+	
+	private Field[] fields;
 
 	public ContainerInstance(Object instance) {
-		this(instance.getClass(), null, null, null);
-		this.instance = instance;
+		this(instance.getClass(), instance, null);
 	}
 	
 	public ContainerInstance(Class<?> cls, Object instance, Class<?> proxyClass) {
@@ -44,6 +46,7 @@ public class ContainerInstance {
 		this.params = params;
 		this.proxyClass = proxyClass;
 		this.proxy = proxyClass != null;
+		this.fields = loadFields(cls);
 	}
 	
 	public Object newInstance(Map<String, ContainerInstance> components) {
@@ -71,7 +74,21 @@ public class ContainerInstance {
 			throw new ArcherApplicationException("can not construct instance of '" + cls.getName() + "'", e);
 		}
 	}
-
+	
+	private Field[] loadFields(Class<?> cls) {
+		Field[] selfFs = cls.getDeclaredFields();
+		if(cls.getSuperclass().equals(Object.class)) {
+			return selfFs;
+		} else {
+			Field[] superFs = loadFields(cls.getSuperclass());
+			Field[] newfs = new Field[selfFs.length + superFs.length];
+			System.arraycopy(selfFs, 0, newfs, 0, selfFs.length);
+			System.arraycopy(superFs, 0, newfs, selfFs.length, superFs.length);
+			selfFs = newfs;
+		}
+		return selfFs;
+	}
+	
 	public Object getInstance() {
 		return instance;
 	}
@@ -102,5 +119,9 @@ public class ContainerInstance {
 
 	public Class<?> getProxyClass() {
 		return proxyClass;
+	}
+
+	public Field[] getFields() {
+		return fields;
 	}
 }

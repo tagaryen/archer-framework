@@ -52,9 +52,9 @@ class ColumnReflect {
 		T ins = (T) ClassUtil.newInstance(cls);
 		Map<String, Field> fieldMap = getClassFieldMap(cls);
 		for(int i = 1; i < colums.length; i++) {
-			Field f = fieldMap.getOrDefault(colums[i].getName(), null);
+			Field f = fieldMap.getOrDefault(colums[i].name(), null);
 			if(f == null) {
-				throw new SQLException("can not set " + colums[i].getName() + 
+				throw new SQLException("can not set " + colums[i].name() + 
 						" to class " + cls.getName());
 			}
 			reflectToField(f, ins, rs.getString(i));

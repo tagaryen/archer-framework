@@ -1,6 +1,6 @@
 package com.archer.framework.datasource.exceptions;
 
-public class SqlException extends Exception {
+public class SqlException extends RuntimeException {
 
     static final long serialVersionUID = -312146793124229948L;
     

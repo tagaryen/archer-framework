@@ -12,8 +12,12 @@ public class IgnoredClass {
 		IGNORED.add("com/archer/xjson/");
 		IGNORED.add("com/archer/math/");
 		IGNORED.add("com/archer/log/");
-		IGNORED.add("com/google/protobuf/");
+		IGNORED.add("com/google/");
 		IGNORED.add("com/mysql/");
+		IGNORED.add("META-INF/versions/");
+		IGNORED.add("com/zaxxer/");
+		IGNORED.add("org/slf4j/");
+		IGNORED.add("org/springframework/");
 	}
 	
 	protected static boolean isIgnored(String name) {

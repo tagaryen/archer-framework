@@ -5,11 +5,11 @@ import java.lang.annotation.Annotation;
 import com.archer.net.http.HttpRequest;
 import com.archer.net.http.HttpResponse;
 
-public interface AnnotationResponseFilter {
+public interface AnnotationResponseFilter<T extends Annotation> {
 
 	FilterState onResponse(HttpRequest req, HttpResponse res, Object ret);
 	
-	Class<? extends Annotation> getAnnotationType();
+	Class<T> getAnnotationType();
 	
 	int priority();
 }

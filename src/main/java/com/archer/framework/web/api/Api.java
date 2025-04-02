@@ -175,8 +175,8 @@ public class Api {
 	
 	RequestParam[] orderedParams;
 	
-	List<AnnotationRequestFilter> antReqFilters;
-	List<AnnotationResponseFilter> antResFilters;
+	List<AnnotationRequestFilter<?>> antReqFilters;
+	List<AnnotationResponseFilter<?>> antResFilters;
 	
 	Api(String uri) {
 		this(null, null, OPTION, uri, 
@@ -352,11 +352,11 @@ public class Api {
 		}
 	}
 	
-	protected void addResquestFilter(AnnotationRequestFilter antReqFilter) {
+	protected void addResquestFilter(AnnotationRequestFilter<?> antReqFilter) {
 		antReqFilters.add(antReqFilter);
 	}
 	
-	protected void addResponseFilter(AnnotationResponseFilter antResFilter) {
+	protected void addResponseFilter(AnnotationResponseFilter<?> antResFilter) {
 		antResFilters.add(antResFilter);
 	}
 	
@@ -370,7 +370,7 @@ public class Api {
 	}
 	
 	public FilterState doFilter(HttpRequest req, HttpResponse res) {
-		for(AnnotationRequestFilter filter: antReqFilters) {
+		for(AnnotationRequestFilter<?> filter: antReqFilters) {
 			if(FilterState.END.equals(filter.onRequest(req, res))) {
 				return FilterState.END;
 			}
@@ -379,7 +379,7 @@ public class Api {
 	}
 	
 	public FilterState doFilter(HttpRequest req, HttpResponse res, Object ret) {
-		for(AnnotationResponseFilter filter: antResFilters) {
+		for(AnnotationResponseFilter<?> filter: antResFilters) {
 			if(FilterState.END.equals(filter.onResponse(req, res, ret))) {
 				return FilterState.END;
 			}

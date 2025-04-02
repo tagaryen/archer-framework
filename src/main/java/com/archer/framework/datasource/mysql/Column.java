@@ -2,22 +2,57 @@ package com.archer.framework.datasource.mysql;
 
 import java.util.Arrays;
 
-public class Column {
+class Column {
 	
 	private static final char PREX = '_';
 	private static final char BE = 'a';
 	private static final char ED = 'z';
 	
+	private String rawName;
+	
 	private String name;
 	
-	private int type;
+	private String typeName;
 	
-	public Column(String name, int type) {
-		this.name = formatName(name);
-		this.type = type;
+	private boolean isKey;
+	
+	public Column(String name) {
+		this(name, null, false);
 	}
 	
-	private String formatName(String name) {
+	public Column(String name, String typeName, boolean isKey) {
+		this.rawName = name;
+		this.name = formatColumnName(name);
+		this.isKey = isKey;
+		this.typeName = typeName;
+	}
+
+
+	public String rawName() {
+		return rawName;
+	}
+	
+	public String name() {
+		return name;
+	}
+	
+	public void typeName(String typeName) {
+		this.typeName = typeName;
+	}
+	
+	public String typeName() {
+		return this.typeName;
+	}
+	
+	public void isKey(boolean isKey) {
+		this.isKey = isKey;
+	}
+	
+	public boolean isKey() {
+		return this.isKey;
+	}
+	
+	public static String formatColumnName(String name) {
 		char[] chars = name.toCharArray();
 		char[] newChars = new char[chars.length];
 		int off = 0, i = 0;
@@ -41,16 +76,18 @@ public class Column {
 		return new String(Arrays.copyOfRange(newChars, 0, off));
 	}
 	
-	public String getName() {
-		return name;
-	}
-	public void setName(String name) {
-		this.name = name;
-	}
-	public int getType() {
-		return type;
-	}
-	public void setType(int type) {
-		this.type = type;
+	public static String formatFieldName(String name) {
+		char[] chars = name.toCharArray();
+		char[] newChars = new char[chars.length * 2];
+		int off = 0, i = 0;
+		for(; i < chars.length; i++) {
+			if('A' <= chars[i] && chars[i] <= 'Z') {
+				newChars[off++] = '_';
+				newChars[off++] = (char) (chars[i] + 32);
+			} else {
+				newChars[off++] = chars[i];
+			}
+		}
+		return new String(Arrays.copyOfRange(newChars, 0, off));
 	}
 }

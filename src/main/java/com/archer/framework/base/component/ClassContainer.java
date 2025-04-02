@@ -7,7 +7,6 @@ import java.net.URL;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -20,7 +19,6 @@ import com.archer.framework.base.conf.Conf;
 import com.archer.framework.base.exceptions.ArcherApplicationException;
 import com.archer.framework.base.logger.LoggerInitliazer;
 import com.archer.framework.base.timer.Timer;
-import com.archer.framework.web.Archer;
 import com.archer.tools.java.PathUtil;
 
 public class ClassContainer {
@@ -45,23 +43,18 @@ public class ClassContainer {
 		try {
 			components.loadForwardComponents();
 			components.loadAllComponents();
+			components.logger().info("Archer Application started in {}ms", timer.calculateCost());
 		} catch(Exception e) {
-			stopComponents();
-			throw e;
-		}
-		components.logger().info("Archer Application started in {}ms", timer.calculateCost());
-	}
-	
-	public void stopComponents() {
-		Archer archer = (Archer) components.getComponent(Archer.class);
-		if(archer != null) {
-			archer.destroy();
+			components.logger().error("{}", e.getLocalizedMessage());
+			e.printStackTrace();
+			components.logger().warn("Archer Application start failed");
+			System.exit(0);
 		}
 	}
 	
 	private List<Class<?>> listAllClasses() {
 		PathUtil.getCurrentWorkDir();
-		List<Class<?>> classes = new LinkedList<>();
+		List<Class<?>> classes = new ArrayList<>();
 		URL[] urls = getClassPathURL();
         for (URL url : urls) {
         	String path = url.getPath();
@@ -143,7 +136,7 @@ public class ClassContainer {
     }
 	
 	private List<Class<?>> getClassesFromJar(String jarFilePath) throws IOException {
-    	List<Class<?>> classes = new LinkedList<>();
+    	List<Class<?>> classes = new ArrayList<>();
         try(JarFile jarFile = new JarFile(jarFilePath)) {
             Enumeration<JarEntry> entries = jarFile.entries();
             while (entries.hasMoreElements()) {
@@ -154,7 +147,7 @@ public class ClassContainer {
                 	}
                     try {
                     	String className = entry.getName().replace('/', '.').substring(0, entry.getName().length() - 6);
-                        Class<?> clazz = Class.forName(className);
+                    	Class<?> clazz = Class.forName(className);
                         if(checkClass(clazz)) {
                             classes.add(clazz);
                         }

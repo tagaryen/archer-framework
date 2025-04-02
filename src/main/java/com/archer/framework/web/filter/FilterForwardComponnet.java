@@ -17,8 +17,8 @@ public final class FilterForwardComponnet implements ForwardComponent {
 	private List<RequestFilter> reqFilters;
 	private List<ResponseFilter> resFilters;
 
-	private Map<Class<? extends Annotation>, AnnotationRequestFilter> antReqFilters;
-	private Map<Class<? extends Annotation>, AnnotationResponseFilter> antResFilters;
+	private Map<Class<? extends Annotation>, AnnotationRequestFilter<?>> antReqFilters;
+	private Map<Class<? extends Annotation>, AnnotationResponseFilter<?>> antResFilters;
 	
 	private List<Object> allFilters;
 	
@@ -59,12 +59,12 @@ public final class FilterForwardComponnet implements ForwardComponent {
 		for(Class<?> cls: classes) {
 			Object v = null;
 			if(AnnotationRequestFilter.class.isAssignableFrom(cls) && !cls.isInterface() && !Modifier.isAbstract(cls.getModifiers())) {
-				AnnotationRequestFilter ins = (AnnotationRequestFilter) ClassUtil.newInstance(cls);
+				AnnotationRequestFilter<?> ins = (AnnotationRequestFilter<?>) ClassUtil.newInstance(cls);
 				v = ins;
 				antReqFilters.put(ins.getAnnotationType(), ins);
 			}
 			if(AnnotationResponseFilter.class.isAssignableFrom(cls) && !cls.isInterface() && !Modifier.isAbstract(cls.getModifiers())) {
-				AnnotationResponseFilter ins = (AnnotationResponseFilter) ClassUtil.newInstance(cls);
+				AnnotationResponseFilter<?> ins = (AnnotationResponseFilter<?>) ClassUtil.newInstance(cls);
 				v = ins;
 				antResFilters.put(ins.getAnnotationType(), ins);
 			}
@@ -101,12 +101,12 @@ public final class FilterForwardComponnet implements ForwardComponent {
 	}
 
 
-	public Map<Class<? extends Annotation>, AnnotationRequestFilter> getAntReqFilters() {
+	public Map<Class<? extends Annotation>, AnnotationRequestFilter<?>> getAntReqFilters() {
 		return antReqFilters;
 	}
 
 
-	public Map<Class<? extends Annotation>, AnnotationResponseFilter> getAntResFilters() {
+	public Map<Class<? extends Annotation>, AnnotationResponseFilter<?>> getAntResFilters() {
 		return antResFilters;
 	}
 	

@@ -4,6 +4,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
+import com.archer.framework.datasource.annotation.Entity;
+
+@Entity(tableName = "sqltest")
 public class SqlEntity {
 	
 	private Long id;

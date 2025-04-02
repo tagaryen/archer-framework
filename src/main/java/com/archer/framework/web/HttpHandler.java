@@ -59,7 +59,7 @@ public final class HttpHandler extends HttpWrappedHandler {
 			parseMaxBody();
 		}
 		if(maxBody > 0 && req.getContentLength() > maxBody) {
-			responseBadRequest(res, "request body length overflow");
+			responseServerError(res, "request body length overflow");
 			return ;
 		}
 		if(FilterState.END.equals(matcher.filterRequest(req, res))) {
@@ -76,9 +76,9 @@ public final class HttpHandler extends HttpWrappedHandler {
 			res.setHeader("content-type", api.getResContentType());
 		} catch(Exception e) {
 			if(e instanceof ParamException) {
-				responseBadRequest(res, "Invalid params");
+				responseServerError(res, "Invalid params");
 			} else {
-				responseBadRequest(res, "Internal Server Error");
+				responseServerError(res, "Internal Server Error");
 			}
 			e.printStackTrace();
 			return ;
@@ -128,11 +128,11 @@ public final class HttpHandler extends HttpWrappedHandler {
 		res.setContent(body.getBytes());
 	}
 	
-	private void responseBadRequest(HttpResponse res, String reason) {
+	private void responseServerError(HttpResponse res, String reason) {
 		String body = "{" +
 				"\"server\": \"Archer Http Server\"," +
 				"\"time\": \"" + LocalDateTime.now().toString() + "\"," +
-				"\"status\": \"" + HttpStatus.BAD_REQUEST + "\"," +
+				"\"status\": \"" + HttpStatus.INTERNAL_SERVER_ERROR + "\"," +
 				"\"reason\": \"" + reason + "\"" +
 			"}";
 		res.setStatus(HttpStatus.NOT_FOUND);

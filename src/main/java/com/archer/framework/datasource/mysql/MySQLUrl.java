@@ -5,11 +5,9 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.*;
-
 import com.archer.framework.datasource.exceptions.SqlException;
 
-public class MySQLUrlParser {
+public class MySQLUrl {
 	
 
     private static final Pattern CONNECTION_STRING_PTRN = Pattern.compile("(?<scheme>[\\w\\+:%]+)\\s*" // scheme: required; alphanumeric, plus, colon or percent
@@ -31,7 +29,7 @@ public class MySQLUrlParser {
     
     
 
-	public void parseConnectionUrl(String url) throws UnsupportedEncodingException, SqlException {
+	public void parseConnectionUrl(String url) {
 
         Matcher matcher = CONNECTION_STRING_PTRN.matcher(url);
         if (!matcher.matches()) {
@@ -39,7 +37,11 @@ public class MySQLUrlParser {
         }
         this.scheme = matcher.group("scheme");
         this.authority = matcher.group("authority");
-        this.database = matcher.group("path") == null ? null : URLDecoder.decode(matcher.group("path"), StandardCharsets.UTF_8.name()).trim();
+        try {
+			this.database = matcher.group("path") == null ? null : URLDecoder.decode(matcher.group("path"), StandardCharsets.UTF_8.name()).trim();
+		} catch (UnsupportedEncodingException e) {
+			throw new SqlException(e);
+		}
         this.query = matcher.group("query");
         
         parseAuthoritySection(url);
@@ -102,48 +104,8 @@ public class MySQLUrlParser {
 	public int getPort() {
 		return port;
 	}
-    
-
-	private static final int LEVEL = 6;
-    private static final int BUF_SIZE = 1024 * 1024;
-
-    public static byte[] compress(byte[] input) {
-        Deflater compresser = new Deflater(LEVEL);
-        compresser.setInput(input);
-        compresser.finish();
-        int offset = 0;
-        byte[] buf = new byte[BUF_SIZE];
-        while(!compresser.finished()) {
-            offset += compresser.deflate(buf, offset, buf.length - offset);
-            if(offset >= buf.length) {
-                byte[] newBuf = new byte[buf.length << 1];
-                System.arraycopy(buf, 0, newBuf, 0, buf.length);
-                buf = newBuf;
-            }
-        }
-        compresser.end();
-        byte[] output = new byte[offset];
-        System.arraycopy(buf, 0, output, 0, offset);
-        return output;
-    }
-
-
-    public static byte[] decompress(byte[] input) throws DataFormatException {
-        Inflater decompresser = new Inflater();
-        decompresser.setInput(input);
-        int offset = 0;
-        byte[] buf = new byte[BUF_SIZE];
-        while(!decompresser.finished()) {
-            offset += decompresser.inflate(buf, offset, buf.length - offset);
-            if(offset >= buf.length) {
-                byte[] newBuf = new byte[buf.length << 1];
-                System.arraycopy(buf, 0, newBuf, 0, buf.length);
-                buf = newBuf;
-            }
-        }
-        decompresser.end();
-        byte[] output = new byte[offset];
-        System.arraycopy(buf, 0, output, 0, offset);
-        return output;
-    }
+	
+	public String getDatabseUrl() {
+		return database + "/" + query;
+	}
 }

@@ -1,7 +1,5 @@
 package com.archer.test.run;
 
-import java.lang.annotation.Annotation;
-
 import com.archer.framework.base.annotation.Log;
 import com.archer.framework.web.filter.AnnotationRequestFilter;
 import com.archer.framework.web.filter.FilterState;
@@ -11,13 +9,13 @@ import com.archer.net.http.HttpRequest;
 import com.archer.net.http.HttpResponse;
 import com.archer.net.http.HttpStatus;
 
-public class TokenFilter implements AnnotationRequestFilter {
+public class TokenFilter implements AnnotationRequestFilter<Token> {
 	
 	@Log
 	Logger log;
 	
 	@Override
-	public Class<? extends Annotation> getAnnotationType() {
+	public Class<Token> getAnnotationType() {
 		return Token.class;
 	}
 

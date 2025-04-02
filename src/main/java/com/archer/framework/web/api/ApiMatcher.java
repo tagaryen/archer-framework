@@ -93,10 +93,10 @@ public class ApiMatcher {
 	}
 	
 	private void associateApiWithAnnotationFilter() {
-		Map<Class<? extends Annotation>, AnnotationRequestFilter> antReqFilters = filterForward.getAntReqFilters();
-		Map<Class<? extends Annotation>, AnnotationResponseFilter> antResFilters = filterForward.getAntResFilters();
+		Map<Class<? extends Annotation>, AnnotationRequestFilter<?>> antReqFilters = filterForward.getAntReqFilters();
+		Map<Class<? extends Annotation>, AnnotationResponseFilter<?>> antResFilters = filterForward.getAntResFilters();
 		
-		for(Map.Entry<Class<? extends Annotation>, AnnotationRequestFilter> entry : antReqFilters.entrySet()) {
+		for(Map.Entry<Class<? extends Annotation>, AnnotationRequestFilter<?>> entry : antReqFilters.entrySet()) {
 			for(Api api: apis) {
 				if(api.isBeforeOption()) {
 					continue;
@@ -107,7 +107,7 @@ public class ApiMatcher {
 				}
 			}
 		}
-		for(Map.Entry<Class<? extends Annotation>, AnnotationResponseFilter> entry : antResFilters.entrySet()) {
+		for(Map.Entry<Class<? extends Annotation>, AnnotationResponseFilter<?>> entry : antResFilters.entrySet()) {
 			for(Api api: apis) {
 				if(api.isBeforeOption()) {
 					continue;
