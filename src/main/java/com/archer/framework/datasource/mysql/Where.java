@@ -1,12 +1,21 @@
 package com.archer.framework.datasource.mysql;
 
+import com.archer.framework.datasource.exceptions.SqlException;
+
 public class Where {
 	private StringBuilder sql;
 	private boolean hasNext;
 	
 	public Where(String column, Types type, Object val) {
 		String strVal = FieldReflect.formatObject(val);
-		this.sql = new StringBuilder(" `"+column+"`"+type.typeVal()+strVal);
+		if(type == Types.IN) {
+			if(!(val instanceof String)) {
+				throw new SqlException("where in type val must be a raw sql string");
+			}
+			this.sql = new StringBuilder(" `"+column+"` "+type.typeVal()+" ("+((String) val)+")");
+		} else {
+			this.sql = new StringBuilder(" `"+column+"` "+type.typeVal()+" "+strVal);
+		}
 		this.hasNext = false;
 	}
 
