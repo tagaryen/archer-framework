@@ -31,7 +31,9 @@ public abstract class Repository<T> {
 			Object keyV = key.field().get(ins);
 			if(keyV == null) {
 				insertSave(ins, null);
-				return exe.queryOne("select `" + key.column().rawName() + "` from `" + table + "` order by `" + key.column().rawName() + "` desc limit 1", cls);
+				T newIns = exe.queryOne("select max(`" + key.column().rawName() + "`) as `"+key.column().rawName()+"` from `" + table + "`", cls);
+				key.field().set(ins, key.field().get(newIns));
+				return ins;
 			}
 			String strV = FieldReflect.formatObject(keyV);
 			T exists = exe.queryOne("select `" + key.column().rawName() + "` from `" + table + "` where `" + key.column().rawName() + "` = " + strV, cls);

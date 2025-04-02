@@ -348,7 +348,7 @@ public class Api {
 			return method.invoke(instance, paramInstances);
 		} catch (Exception e) {
 			throw new ArcherApplicationException("call " + instance.getClass().getName() + "." + method.getName() + 
-					" failed", e);
+					" failed: " + e.getLocalizedMessage(), e);
 		}
 	}
 	

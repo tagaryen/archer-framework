@@ -3,7 +3,6 @@ package com.archer.test.run;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -11,7 +10,6 @@ import com.archer.framework.base.annotation.Async;
 import com.archer.framework.base.annotation.Inject;
 import com.archer.framework.base.annotation.Log;
 import com.archer.framework.base.annotation.Service;
-import com.archer.framework.datasource.mysql.MySQLExecutor;
 import com.archer.framework.datasource.mysql.Where;
 import com.archer.log.Logger;
 
@@ -36,9 +34,9 @@ public class TestService implements TestServiceInter {
 		long t1 = System.currentTimeMillis();
 		List<SqlEntity> entities = sqlRepo.findListBy(new Where("column_c", Where.Types.BIGGER, 5000).or(new Where("column_b", Where.Types.SMALLER, 70).and(new Where("column_b", Where.Types.BIGGER, 60))));
 		
-		for(SqlEntity en: entities) {
-			log.info("id = {}, column_a = {}", en.getId(), en.getColumnA());
-		}
+//		for(SqlEntity en: entities) {
+//			log.info("id = {}, column_a = {}", en.getId(), en.getColumnA());
+//		}
 
 		long t2 = System.currentTimeMillis();
 		entity.setColumnI(LocalDateTime.now());
