@@ -1,4 +1,4 @@
-package com.archer.framework.datasource.mysql;
+package com.archer.test.mysql;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
