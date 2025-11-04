@@ -27,7 +27,7 @@ public class TokenFilter implements AnnotationRequestFilter<Token> {
 			
 			res.setStatus(HttpStatus.UNAUTHORIZED);
 			res.setContentType(ContentType.APPLICATION_JSON);
-			res.setContent("{\"msg\":\"token is required\"}".getBytes());
+			res.sendContent("{\"msg\":\"token is required\"}".getBytes());
 			
 			return FilterState.END;
 		}

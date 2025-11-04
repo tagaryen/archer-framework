@@ -94,9 +94,9 @@ public final class HttpHandler extends HttpWrappedHandler {
 		setResponseHeaders(res);
 		
 		if(ret instanceof String) {
-			res.setContent(((String)ret).getBytes(StandardCharsets.UTF_8));
+			res.sendContent(((String)ret).getBytes(StandardCharsets.UTF_8));
 		} else {
-			res.setContent(xjson.stringify(ret).getBytes(StandardCharsets.UTF_8));
+			res.sendContent(xjson.stringify(ret).getBytes(StandardCharsets.UTF_8));
 		}
 	}
 
@@ -113,7 +113,7 @@ public final class HttpHandler extends HttpWrappedHandler {
 			
 			res.setStatus(HttpStatus.SERVICE_UNAVAILABLE);
 			res.setContentType(ContentType.APPLICATION_JSON);
-			res.setContent(body.getBytes());
+			res.sendContent(body.getBytes());
 		}
 	}
 	
@@ -125,7 +125,7 @@ public final class HttpHandler extends HttpWrappedHandler {
 			"}";
 		res.setStatus(HttpStatus.NOT_FOUND);
 		res.setContentType(ContentType.APPLICATION_JSON);
-		res.setContent(body.getBytes());
+		res.sendContent(body.getBytes());
 	}
 	
 	private void responseServerError(HttpResponse res, String reason) {
@@ -137,7 +137,7 @@ public final class HttpHandler extends HttpWrappedHandler {
 			"}";
 		res.setStatus(HttpStatus.NOT_FOUND);
 		res.setContentType(ContentType.APPLICATION_JSON);
-		res.setContent(body.getBytes());
+		res.sendContent(body.getBytes());
 	}
 	
 	private void setResponseHeaders(HttpResponse res) {

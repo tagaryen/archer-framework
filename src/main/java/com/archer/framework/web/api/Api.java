@@ -276,7 +276,7 @@ public class Api {
 	
 	public Object invoke(HttpRequest req, HttpResponse res, String[] pathVals, Map<String, String> queryVals, XJSON xjson) {
 		if(isBeforeOption()) {
-			res.setContent(OPTION_RES.getBytes());
+			res.sendContent(OPTION_RES.getBytes());
 			return null;
 		}
 		int reqParamsCount = pathVals.length + queryVals.size() + (req.getContent() == null ? 0 : 1);

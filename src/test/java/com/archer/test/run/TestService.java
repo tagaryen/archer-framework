@@ -25,7 +25,6 @@ public class TestService implements TestServiceInter {
 	public ResponseVO test(String id, String pathVar, RequestVO vo) {
 		log.info("get in service test1, id = {}, vo = {}", id, (vo == null?"null":vo));
 		
-//		test3(pathVar);
 		
 		ResponseVO res = new ResponseVO();
 		long t0 = System.currentTimeMillis();
@@ -58,15 +57,9 @@ public class TestService implements TestServiceInter {
 	
 	public ResponseVO test2(String queryP, MultipartVO vo) {
 		
-		log.info("get in service test2, queryP = {}", queryP);
+		log.info("get in service test2, queryP = {}, req = {}", queryP, vo.req);
 
-		log.info("get in service test2, req = {}", vo.req);
-		
-		try {
-			Files.write(Paths.get("e:/tmp.xml"), vo.file);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		test3(queryP);
 		
 		ResponseVO res = new ResponseVO();
 		res.id = "thisID";
