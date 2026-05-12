@@ -1,5 +1,6 @@
 target/**
 crt/**
+db/**
 logs/**
 .apt_generated
 .classpath

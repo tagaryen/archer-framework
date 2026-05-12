@@ -17,7 +17,7 @@ public class SqliteConfig {
 	@Value(id = "archer.datasource.sqlite.showSql", defaultVal = "false")
 	private boolean showSql;
 	
-	@Value(id = "archer.datasource.sqlite.url", defaultVal = "jdbc:sqlite:sqlite/archer.db")
+	@Value(id = "archer.datasource.sqlite.url", defaultVal = "jdbc:sqlite:archer.db")
 	private String url;
 
 	@Value(id = "archer.datasource.sqlite.explicitReadOnly", defaultVal = "false")

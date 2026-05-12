@@ -1,7 +1,5 @@
 package com.archer.framework.base;
 
-import org.sqlite.SQLiteConfig;
-
 import com.archer.framework.base.component.ClassContainer;
 import com.archer.framework.base.conf.Conf;
 import com.archer.framework.base.conf.ConfLoader;

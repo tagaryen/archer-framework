@@ -10,8 +10,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.sqlite.SQLiteConfig;
-
 import com.archer.framework.base.annotation.Async;
 import com.archer.framework.base.annotation.Component;
 import com.archer.framework.base.annotation.Config;
