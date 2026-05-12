@@ -1,10 +1,15 @@
 package com.archer.framework.datasource.sqlite;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.Properties;
 
 import org.sqlite.JDBC;
 import org.sqlite.SQLiteConnection;
+
 import com.archer.framework.datasource.exceptions.SqlException;
 
 public class ArcherSqlitePool {
@@ -18,8 +23,7 @@ public class ArcherSqlitePool {
 	public ArcherSqlitePool(SqliteConfig appConf) throws SQLException {
 		conns = new ArcherSqliteConnection[poolSize];
 		config = appConf;
-		
-		
+		createDirectories();
 		for(int i = 0; i < poolSize; i++) {
 			conns[i] = new ArcherSqliteConnection(newConnection());
 		}
@@ -50,5 +54,25 @@ public class ArcherSqlitePool {
 		
 		SQLiteConnection conn = JDBC.createConnection(config.getUrl(), properties);
 		return conn;
+	}
+	
+	private void createDirectories() {
+		String url = config.getUrl();
+		if(!url.startsWith("jdbc:sqlite:")) {
+			throw new SqlException("Invalid sqlite url '" + url + "'");
+		}
+		String filePath = url.substring(12);
+		int slash = filePath.lastIndexOf('/');
+		if(slash > 0) {
+			Path dir = Paths.get(filePath.substring(0, slash));
+			if(!Files.exists(dir)) {
+				try {
+					Files.createDirectories(dir);
+				} catch (IOException e) {
+					throw new SqlException("Could not create directories " + dir.toString());
+				}
+			}
+		}
+		
 	}
 }

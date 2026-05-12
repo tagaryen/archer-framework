@@ -20,8 +20,11 @@ public class TestService implements TestServiceInter {
 	@Log
 	Logger log;
 	
+//	@Inject
+//	MySQLEntityRepository sqlRepo;
+
 	@Inject
-	SqlRepository sqlRepo;
+	SqliteEntityRepository sqlRepo;
 
 	public ResponseVO test(String id, String pathVar, RequestVO vo) {
 		log.info("get in service test1, id = {}, vo = {}", id, (vo == null?"null":vo));

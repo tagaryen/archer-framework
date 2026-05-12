@@ -16,6 +16,9 @@ public class RepositoryForward implements ForwardComponent {
 			if(MysqlRepository.class.isAssignableFrom(cls) && !cls.isInterface() && !Modifier.isAbstract(cls.getModifiers())) {
 				repos.add(ClassUtil.newInstance(cls));
 			}
+			if(SqliteRepository.class.isAssignableFrom(cls) && !cls.isInterface() && !Modifier.isAbstract(cls.getModifiers())) {
+				repos.add(ClassUtil.newInstance(cls));
+			}
 		}
 		return repos;
 	}

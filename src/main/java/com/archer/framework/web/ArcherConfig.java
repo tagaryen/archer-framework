@@ -31,7 +31,7 @@ public class ArcherConfig {
 		Archer archer = new Archer().setThreadNum(threadNum);
 		try {
 			archer.listen(host, port, handler);
-			log.info("Archer Server started on {}", port);
+			log.info("Archer Server listening on {}", port);
 		} catch (HttpServerException e) {
 			log.error("server listening {} failed, {}", port, e);
 			System.exit(0);
