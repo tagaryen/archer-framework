@@ -1,4 +1,4 @@
-package com.archer.framework.datasource.mysql;
+package com.archer.framework.datasource.sqlang;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -13,7 +13,7 @@ public class RepositoryForward implements ForwardComponent {
 	public List<Object> listForwardComponents(List<Class<?>> classes) {
 		List<Object> repos = new ArrayList<>(64);
 		for(Class<?> cls: classes) {
-			if(Repository.class.isAssignableFrom(cls) && !cls.isInterface() && !Modifier.isAbstract(cls.getModifiers())) {
+			if(MysqlRepository.class.isAssignableFrom(cls) && !cls.isInterface() && !Modifier.isAbstract(cls.getModifiers())) {
 				repos.add(ClassUtil.newInstance(cls));
 			}
 		}

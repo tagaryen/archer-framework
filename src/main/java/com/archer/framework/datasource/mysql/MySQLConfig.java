@@ -11,19 +11,19 @@ import com.archer.log.Logger;
 @Config
 public class MySQLConfig {
 
-	@Value(id = "archer.datasource.mysql.enabled", defaultVal = "true")
+	@Value(id = "archer.datasource.mysql.enabled", defaultVal = "false")
 	private boolean enabled;
 
 	@Value(id = "archer.datasource.mysql.showSql", defaultVal = "false")
 	private boolean showSql;
 	
-	@Value(id = "archer.datasource.mysql.url")
+	@Value(id = "archer.datasource.mysql.url", defaultVal = "#")
 	private String url;
 	
-	@Value(id = "archer.datasource.mysql.user")
+	@Value(id = "archer.datasource.mysql.user", defaultVal = "#")
 	private String user;
 	
-	@Value(id = "archer.datasource.mysql.pwd")
+	@Value(id = "archer.datasource.mysql.pwd", defaultVal = "#")
 	private String pwd;
 
 	@Value(id = "archer.datasource.mysql.maxPoolSize", defaultVal = "60")
@@ -95,7 +95,7 @@ public class MySQLConfig {
 	}
 
 	@ConfigComponent(enabled = "archer.datasource.mysql.enabled")
-	public MySQLExecutor initMySQLExecutor() throws SQLException {
+	public MySQLExecutor initExecutor() throws SQLException {
 		log.info("connect to mysql {}", url);
 		return new MySQLExecutor(this, log);
 	}

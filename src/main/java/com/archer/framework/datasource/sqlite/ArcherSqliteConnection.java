@@ -1,17 +1,17 @@
-package com.archer.framework.datasource.mysql.pool;
+package com.archer.framework.datasource.sqlite;
 
 import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.mysql.cj.jdbc.JdbcConnection;
+import org.sqlite.SQLiteConnection;
 
-public class ArcherConnection {
 
-	private JdbcConnection conn;
+public class ArcherSqliteConnection {
+
+	private SQLiteConnection conn;
 	private AtomicBoolean used;
 	
-	public ArcherConnection(JdbcConnection conn) throws SQLException {
-		conn.pingInternal(true, 1000);
+	public ArcherSqliteConnection(SQLiteConnection conn) throws SQLException {
 		this.conn = conn;
 		this.used = new AtomicBoolean(false);
 	}
@@ -28,7 +28,7 @@ public class ArcherConnection {
 		return this.used.compareAndSet(false, true);
 	}
 	
-	public JdbcConnection getConnection() {
+	public SQLiteConnection getConnection() {
 		return conn;
 	}
 	

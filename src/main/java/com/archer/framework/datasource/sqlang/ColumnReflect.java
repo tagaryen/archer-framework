@@ -1,4 +1,4 @@
-package com.archer.framework.datasource.mysql;
+package com.archer.framework.datasource.sqlang;
 
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.archer.tools.java.ClassUtil;
 
-class ColumnReflect {
+public final class ColumnReflect {
 
 	static final String BOOL_TYPE = "boolean";
 	static final String BYTE_TYPE = "byte";
@@ -45,7 +45,7 @@ class ColumnReflect {
 	static Map<Class<?>, Map<String, Field>> classFieldMap = new ConcurrentHashMap<>();
 
 	
-	protected ColumnReflect() {}
+	public ColumnReflect() {}
 
 	@SuppressWarnings("unchecked")
 	public <T> T newInstanceAndSetColumns(Column[] colums, ResultSet rs, Class<T> cls) throws SQLException {

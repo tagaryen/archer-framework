@@ -1,4 +1,4 @@
-package com.archer.framework.datasource.mysql;
+package com.archer.framework.datasource.sqlang;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -9,8 +9,9 @@ import java.util.List;
 import com.archer.framework.base.annotation.Inject;
 import com.archer.framework.datasource.annotation.Entity;
 import com.archer.framework.datasource.exceptions.SqlException;
+import com.archer.framework.datasource.sqlite.SqliteExecutor;
 
-public abstract class Repository<T> {
+public abstract class SqliteRepository<T> {
 
 	private Class<T> cls = null;
 	
@@ -23,7 +24,7 @@ public abstract class Repository<T> {
 	private String table = null;
 	
 	@Inject
-	MySQLExecutor exe;
+	SqliteExecutor exe;
 	
 	public T save(T ins) {
 		try {

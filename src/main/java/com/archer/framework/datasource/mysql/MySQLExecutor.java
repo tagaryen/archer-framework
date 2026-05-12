@@ -8,11 +8,12 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.archer.framework.datasource.mysql.pool.ArcherConnection;
-import com.archer.framework.datasource.mysql.pool.ArcherMysqlPool;
+import com.archer.framework.datasource.ArcherExecutor;
+import com.archer.framework.datasource.sqlang.Column;
+import com.archer.framework.datasource.sqlang.ColumnReflect;
 import com.archer.log.Logger;
 
-public class MySQLExecutor {
+public class MySQLExecutor implements ArcherExecutor {
     
     private MySQLConfig config;
     private ArcherMysqlPool dataSource;
@@ -46,7 +47,7 @@ public class MySQLExecutor {
     	if(config.isShowSql()) {
         	log.info("sql: ", sql);
     	}
-    	ArcherConnection archerConn = this.dataSource.getConnection();
+    	ArcherMysqlConnection archerConn = this.dataSource.getConnection();
     	try {
         	PreparedStatement statement = archerConn.getConnection().prepareStatement(sql);
         	ResultSet result = statement.executeQuery();
@@ -70,7 +71,7 @@ public class MySQLExecutor {
     	if(config.isShowSql()) {
         	log.info("sql: ", sql);
     	}
-    	ArcherConnection archerConn = this.dataSource.getConnection();
+    	ArcherMysqlConnection archerConn = this.dataSource.getConnection();
     	try {
         	PreparedStatement statement = archerConn.getConnection().prepareStatement(sql);
         	ResultSet result = statement.executeQuery();
@@ -96,7 +97,7 @@ public class MySQLExecutor {
     	if(config.isShowSql()) {
         	log.info("sql: ", sql);
     	}
-    	ArcherConnection archerConn = this.dataSource.getConnection();
+    	ArcherMysqlConnection archerConn = this.dataSource.getConnection();
     	try {
         	PreparedStatement statement = archerConn.getConnection().prepareStatement(sql);
         	statement.execute();
@@ -110,7 +111,7 @@ public class MySQLExecutor {
     	if(config.isShowSql()) {
         	log.info("sql: ", sql);
     	}
-    	ArcherConnection archerConn = this.dataSource.getConnection();
+    	ArcherMysqlConnection archerConn = this.dataSource.getConnection();
     	try {
         	PreparedStatement statement = archerConn.getConnection().prepareStatement(sql);
         	int count = statement.executeUpdate();
@@ -122,7 +123,7 @@ public class MySQLExecutor {
     }
     
     public List<Column> showColumns(String tableName) throws SQLException {
-    	ArcherConnection archerConn = this.dataSource.getConnection();
+    	ArcherMysqlConnection archerConn = this.dataSource.getConnection();
     	try {
     		Statement statement = archerConn.getConnection().createStatement();
     		ResultSet result = statement.executeQuery("describe `" + tableName + "`");

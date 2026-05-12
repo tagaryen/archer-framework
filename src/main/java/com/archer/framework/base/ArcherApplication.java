@@ -1,5 +1,7 @@
 package com.archer.framework.base;
 
+import org.sqlite.SQLiteConfig;
+
 import com.archer.framework.base.component.ClassContainer;
 import com.archer.framework.base.conf.Conf;
 import com.archer.framework.base.conf.ConfLoader;
@@ -12,7 +14,7 @@ public class ArcherApplication {
 		if(!PlatformUtil.isWindows() && !PlatformUtil.isLinux()) {
 			System.out.println("paltform " + System.getProperty("os.name") + " is not supported.");
 			System.exit(0);
-		}
+		}	
 		Conf conf  = ConfLoader.load();
 		ClassContainer classes = new ClassContainer(conf);
 		classes.loadComponents();

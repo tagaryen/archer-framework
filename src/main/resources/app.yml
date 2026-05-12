@@ -18,9 +18,13 @@ archer:
     file-name: archer-log 
 
   datasource: 
-    mysql:
+    # mysql:
+      # enabled: true 
+      # url: jdbc:mysql://10.32.122.173:4406/alice?characterEncoding=UTF-8&serverTimezong=Asia/Shanghai
+      # user: secret
+      # pwd: secret_test
+    sqlite:
       enabled: true 
-      url: jdbc:mysql://10.32.122.173:4406/node2?characterEncoding=UTF-8&serverTimezong=Asia/Shanghai
-      user: secret
-      pwd: secret_test
+      showSql: true
+      url: jdbc:sqlite:db/test.db
 

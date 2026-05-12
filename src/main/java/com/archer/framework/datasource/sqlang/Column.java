@@ -1,8 +1,8 @@
-package com.archer.framework.datasource.mysql;
+package com.archer.framework.datasource.sqlang;
 
 import java.util.Arrays;
 
-class Column {
+public final class Column {
 	
 	private static final char PREX = '_';
 	private static final char BE = 'a';

@@ -1,22 +1,14 @@
 package com.archer.framework.base.async;
 
-import java.lang.reflect.Modifier;
+import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
 import com.archer.tools.bytecode.ClassBytecode;
-import com.archer.tools.bytecode.ClassEnd;
-import com.archer.tools.bytecode.InstructionTable;
 import com.archer.tools.bytecode.MemberInfo;
-import com.archer.tools.bytecode.MemberInfo.AttributeInfo;
-import com.archer.tools.bytecode.MemberInfo.CodeAttribute;
-import com.archer.tools.bytecode.MemberInfo.LineNumAttribute;
-import com.archer.tools.bytecode.MemberInfo.LocalVarAttribute;
-import com.archer.tools.bytecode.constantpool.ConstantClass;
+import com.archer.framework.base.annotation.Async;
+import com.archer.tools.bytecode.AttributeInfo;
+import com.archer.tools.bytecode.AttributeInfo.*;
+import com.archer.tools.bytecode.BytecodeException;
 import com.archer.tools.bytecode.constantpool.ConstantInfo;
-import com.archer.tools.bytecode.constantpool.ConstantMemberRef;
-import com.archer.tools.bytecode.constantpool.ConstantNameAndType;
 import com.archer.tools.bytecode.constantpool.ConstantPool;
 import com.archer.tools.bytecode.constantpool.ConstantUtf8;
 import com.archer.tools.bytecode.util.DescriptorUtil;
@@ -24,28 +16,18 @@ import com.archer.tools.bytecode.util.DescriptorUtil;
 
 public class AsyncProxy {
 	
-	private static final String ASYNC_TYPE = "Lcom/archer/framework/base/annotation/Async;";
-	private static final String THREADPOOL_CLASS = "com/archer/framework/base/async/AsyncPool";
-	private static final String THREADPOOL_TYPE = "Lcom/archer/framework/base/async/AsyncPool;";
-	private static final String POOL_NAME = "pool";
-	private static final String SUBMIT_TASK_CLASS = "com/archer/framework/base/async/AsyncTask";
-	private static final String SUBMIT_TASK_TYPE = "Lcom/archer/framework/base/async/AsyncTask;";
-	private static final String OBJECT_CLASS = "java/lang/Object";
-	private static final String THIS_NAME = "this";
-	private static final String TASK_FIELD_NAME = "ins";
-	
-	
-	
 	private ClassBytecode superCls;
 	private String superClassName;
 	private String superRawClassName;
 	private MemberInfo[] superMethods;
 	private ConstantInfo[] supercp;
+	private String classSimpleName;
 	private String className;
 	private String rawClassName;
-	private String classDesc;
+	private String taskClassSimpleName;
 	private String taskClassName;
 	private String rawTaskClassName;
+	private String asyncType = "L" + DescriptorUtil.replaceDot2Slash(Async.class.getName()) + ";";
 	
 	
 	public AsyncProxy(ClassBytecode superCls) {
@@ -54,9 +36,10 @@ public class AsyncProxy {
 		this.superRawClassName = DescriptorUtil.replaceDot2Slash(this.superClassName);
 		this.superMethods = superCls.getMethods();
 		this.supercp = superCls.getConstantPool().getCpInfo();
+		this.classSimpleName = superCls.getSimpleName() + "$ArcherProxy";
 		this.className = superClassName + "$ArcherProxy";
 		this.rawClassName = DescriptorUtil.replaceDot2Slash(this.className);
-		this.classDesc = "L"+this.rawClassName+";";
+		this.taskClassSimpleName = superCls.getSimpleName() + "$ArcherTask";
 		this.taskClassName = superClassName + "$ArcherTask";
 		this.rawTaskClassName = DescriptorUtil.replaceDot2Slash(this.taskClassName);
 	}
@@ -65,6 +48,7 @@ public class AsyncProxy {
 		int off = 0;
 		String[] overrideMethodNames = new String[superMethods.length];
 		String[] overrideMethodDescs = new String[superMethods.length];
+		String pkg = this.superClassName.substring(0, this.superClassName.lastIndexOf('.'));
 		for(int i = 0; i < superMethods.length; i++) {
 			MemberInfo m = superMethods[i];
 			if("RuntimeVisibleAnnotations".equals(m.getAttributes()[0].getName())) {
@@ -72,948 +56,259 @@ public class AsyncProxy {
 				a0index = a0index < 0 ? a0index + 256 : a0index;
 				a1index = a1index < 0 ? a1index + 256 : a1index;
 				int aindex = (a0index << 8) | a1index;
-				if(ASYNC_TYPE.equals(((ConstantUtf8)supercp[aindex]).getValue())) {
-					String curClsName = taskClassName + (off + 1);
+				if(asyncType.equals(((ConstantUtf8)supercp[aindex]).getValue())) {
+					String name = taskClassSimpleName + (off + 1);
 					overrideMethodNames[off] = m.getName();
 					overrideMethodDescs[off] = m.getDesc();
-					generateAsyncTask(curClsName, m.getName(), m.getDesc()).loadSelfClass();
+					ClassBytecode taskClassBytecode = generateAsyncTask(name, pkg, m.getName(), m.getDesc());
+					taskClassBytecode.loadSelfClass();
 					off++;
 				}
 			}
 		}
-		ClassBytecode newClassByteCode = generateAsyncClassCode(Arrays.copyOfRange(overrideMethodNames, 0, off), Arrays.copyOfRange(overrideMethodDescs, 0, off));
+		ClassBytecode newClassByteCode = generateAsyncClassCode(pkg, Arrays.copyOfRange(overrideMethodNames, 0, off), Arrays.copyOfRange(overrideMethodDescs, 0, off));
 		return newClassByteCode.loadSelfClass();
 	}
 
-	public ClassBytecode generateAsyncClassCode(String overrideMethods[], String overrideMethodDescs[]) {
+	private ClassBytecode generateAsyncTask(String name, String pkg, String methodName, String methodDesc) {
+
+		String proxyMethodName = "super$"+methodName;
+		
+		String[] args = DescriptorUtil.methodDescToArgDescs(methodDesc);
+		String[] consArgs = new String[args.length + 1];
+		consArgs[0] = "L" + this.rawClassName + ";";
+		System.arraycopy(args, 0, consArgs, 1, args.length);
+		
+		ClassBytecode newcls = new ClassBytecode();
+		newcls.toEmptyImplClass(name, pkg, AsyncTask.class);
+		ConstantPool cp = newcls.getConstantPool();
+		int objInitIndex = cp.addMethod("<init>", "()V", "java/lang/Object");
+		int methodIndex = cp.addMethod(proxyMethodName, methodDesc, this.rawClassName);
+		
+
+		/**
+		 * add constructor <init>(consArgs)V
+		 * */
+		CodeAttributeWriter writer = CodeAttributeWriter.of(cp.findName("Code"));
+		writer.addInstruction("aload_0")
+			.addInstruction16("invokespecial", objInitIndex);
+		int slot = 1;
+		for(int j = 0; j < consArgs.length; j++) {
+			int fieldIndex = newcls.addField("p"+j, DescriptorUtil.getDescriptionClassName(consArgs[j]), ClassBytecode.ACC_PUBLIC);
+			writer.addInstruction("aload_0");
+			slot = loadParamCode(writer, consArgs[j], slot);
+			writer.addInstruction16("putfield",fieldIndex);
+		}
+		writer.addInstruction("return");
+
+		newcls.addConstructor(consArgs, writer.toCodeAttribute());
+		
+
+		/**
+		 * add method run()V { impl.super$method(); }
+		 */
+		CodeAttributeWriter runWriter = CodeAttributeWriter.of(cp.findName("Code"));
+		for(int j = 0; j < consArgs.length; j++) {
+			int fieldIndex = newcls.findField("p" + j);
+			runWriter.addInstruction("aload_0")
+				.addInstruction16("getfield", fieldIndex);
+		}
+		runWriter.addInstruction16("invokevirtual", methodIndex)
+			.addInstruction("return");
+
+		newcls.addMethod("run", new String[0], "V", runWriter.toCodeAttribute());
+		
+		return newcls;
+	}
+	
+	
+	public ClassBytecode generateAsyncClassCode(String pkg, String overrideMethods[], String overrideMethodDescs[]) {
 		if(overrideMethods.length != overrideMethodDescs.length) {
 			throw new IllegalArgumentException("the number of overrideMethods and overrideMethodDescs must equal");
 		}
 		
 		ClassBytecode newcls = new ClassBytecode();
-		newcls.setClassName(className);
-		newcls.setMagic(superCls.getMagic());
-		newcls.setMinorVersion(superCls.getMinorVersion());
-		newcls.setMajorVersion(superCls.getMajorVersion());
-		newcls.setAccessFlag(superCls.getAccessFlag());
-		newcls.setClassIndex(1);
-		newcls.setSuperIndex(3);
-		newcls.setInterfaceCount(0);
-		newcls.setInterfaceIndexArr(new int[0]);
+		newcls.toEmptyImplClass(this.classSimpleName, pkg, this.superRawClassName, false);
+		ConstantPool cp = newcls.getConstantPool();
 
+		//add field AsyncPool, impl.pool
+		int poolFieldIndex = newcls.addField("pool", AsyncPool.class, ClassBytecode.ACC_PUBLIC);
 		
-		Map<String, Integer> nameIndexMap = new HashMap<>(128);
+		//add invoke method impl.pool.submit(implTask)
+		int submitIndex = cp.addMethod("submit", "(" + DescriptorUtil.getClassDescription(AsyncTask.class) + ")V", DescriptorUtil.replaceDot2Slash(AsyncPool.class.getName()));
+		int exMethodIndex = cp.addMethod("printStackTrace", "()V", "java/lang/Exception");
+		int stackMapIndex = cp.addName("StackMapTable");
+		int exClassIndex = cp.findClass("java/lang/Exception");
 		
-		int index = 1;
-		ConstantInfo[] constants = new ConstantInfo[256];
-		
-		ConstantClass clazzInfo = new ConstantClass();
-		clazzInfo.setNameIndex(2);
-		constants[index++] = clazzInfo;
-		
-		ConstantUtf8 clazzUtf8Info = new ConstantUtf8();
-		clazzUtf8Info.setValue(this.rawClassName);
-		nameIndexMap.put(rawClassName, index);
-		constants[index++] = clazzUtf8Info;
-		
-		int superClassIndex = index;
-		ConstantClass superInfo = new ConstantClass();
-		superInfo.setNameIndex(4);
-		constants[index++] = superInfo;
-		
-		ConstantUtf8 superUtf8Info = new ConstantUtf8();
-		superUtf8Info.setValue(this.superRawClassName);
-		nameIndexMap.put(superRawClassName, index);
-		constants[index++] = superUtf8Info;
-		
-		ConstantUtf8 poolUtf8 = new ConstantUtf8();
-		poolUtf8.setValue(POOL_NAME);
-		nameIndexMap.put(POOL_NAME, index);
-		constants[index++] = poolUtf8;
-		
-		ConstantUtf8 poolClsUtf8 = new ConstantUtf8();
-		poolClsUtf8.setValue(THREADPOOL_TYPE);
-		nameIndexMap.put(THREADPOOL_TYPE, index);
-		constants[index++] = poolClsUtf8;
-		
-		int poolIndex = index;
-		ConstantMemberRef poolFieldRef = new ConstantMemberRef(ConstantInfo.CONSTANT_Fieldref);
-		poolFieldRef.setClassIndex(1);
-		poolFieldRef.setNameAndTypeIndex(index + 1);
-		constants[index++] = poolFieldRef;
-		
-		ConstantNameAndType poolFieldNameType = new ConstantNameAndType();
-		poolFieldNameType.setNameIndex(nameIndexMap.get(POOL_NAME));
-		poolFieldNameType.setDescIndex(nameIndexMap.get(THREADPOOL_TYPE));
-		constants[index++] = poolFieldNameType;
-
-		ConstantUtf8 mcode = new ConstantUtf8();
-		mcode.setValue("Code");
-		nameIndexMap.put("Code", index);
-		constants[index++] = mcode;
-
-		ConstantUtf8 lnt = new ConstantUtf8();
-		lnt.setValue("LineNumberTable");
-		nameIndexMap.put("LineNumberTable", index);
-		constants[index++] = lnt;
-
-		ConstantUtf8 lvt = new ConstantUtf8();
-		lvt.setValue("LocalVariableTable");
-		nameIndexMap.put("LocalVariableTable", index);
-		constants[index++] = lvt;
-		
-
-		ConstantUtf8 thi = new ConstantUtf8();
-		thi.setValue(THIS_NAME);
-		nameIndexMap.put(THIS_NAME, index);
-		constants[index++] = thi;
-		
-
-		ConstantUtf8 thiType = new ConstantUtf8();
-		thiType.setValue(classDesc);
-		nameIndexMap.put(classDesc, index);
-		constants[index++] = thiType;
-		
-		int consIndex = index;
-		ConstantUtf8 mname = new ConstantUtf8();
-		mname.setValue("<init>");
-		nameIndexMap.put("<init>", index);
-		constants[index++] = mname;
-		
-		MemberInfo[] methods = new MemberInfo[superMethods.length];
-		int methodOff = 0;
-		
-		int lineIndex = 12;
-		for(int i = 0; i < superMethods.length; i++) {
-			MemberInfo m = superMethods[i];
-			if("<init>".equals(m.getName())) {
-				int descIndex = index;
-				if(!nameIndexMap.containsKey(m.getDesc())) {
-					ConstantUtf8 mdesc = new ConstantUtf8();
-					mdesc.setValue(m.getDesc());
-					nameIndexMap.put(m.getDesc(), index);
-					constants[index++] = mdesc;
-				} else {
-					descIndex = nameIndexMap.get(m.getDesc());
-				}
-				
-				int mrefIndex = index;
-				ConstantMemberRef mref = new ConstantMemberRef(ConstantInfo.CONSTANT_Methodref);
-				mref.setClassIndex(superClassIndex);
-				mref.setNameAndTypeIndex( index + 1);
-				constants[index++] = mref;
-
-				ConstantNameAndType mnt = new ConstantNameAndType();
-				mnt.setNameIndex(consIndex);
-				mnt.setDescIndex(descIndex);
-				constants[index++] = mnt;
-				
-				String[] args = parseMethodDesc(m.getDesc());
-				int p = 0;
-				for(String arg: args) {
-					if(!nameIndexMap.containsKey(arg)) {
-						ConstantUtf8 argType = new ConstantUtf8();
-						argType.setValue(arg);
-						nameIndexMap.put(arg, index);
-						constants[index++] = argType;
-					}
-					String argName = "p" + p;
-					if(!nameIndexMap.containsKey(argName)) {
-						ConstantUtf8 argNameType = new ConstantUtf8();
-						argNameType.setValue(argName);
-						nameIndexMap.put(argName, index);
-						constants[index++] = argNameType;
-					}
-					p++;
-				}
-				
-				
-			    /**
-			     * constructor methods
-			     * */
-				int codeLength = 0;
-				if(args.length > 3) {
-					// alod_0: 1byte load 0~3: 3bytes, (load+index)*(args - 3): (args-3)*2 bytes, invoke: 3bytes, return 1byte
-					codeLength = 1 + 3 + (args.length - 3) * 2 + 3 + 1;
-				} else {
-					// alod_0: 1byte load 0~3: 3bytes, invoke: 3bytes, return 1byte
-					codeLength = 1 + args.length + 3 + 1;
-				}
-				byte[] cattCode = new byte[codeLength];
-				cattCode[0] = InstructionTable.getInstructionCode("aload_0");
-				int opIndex = 1;
-				for(int j = 0; j < args.length; j++) {
-					byte[] codes = InstructionTable.decodeLoadIns(args[j],  j);
-					if(codes.length == 1) {
-						cattCode[opIndex++] = codes[0];
-					}
-					if(codes.length == 2) {
-						cattCode[opIndex++] = codes[0];
-						cattCode[opIndex++] = codes[1];
-					}
-				}
-				cattCode[opIndex++] = InstructionTable.getInstructionCode("invokespecial");
-				cattCode[opIndex++] = (byte) ((mrefIndex >> 8) & 0xff);
-				cattCode[opIndex++] = (byte) (mrefIndex & 0xff);
-				cattCode[opIndex++] = InstructionTable.getInstructionCode("return");
-				
-
-				int[][] localVarArr = new int[args.length + 1][];
-				localVarArr[0] = new int[] {0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get(classDesc), 0};
-				for(int j = 1; j < localVarArr.length; j++) {
-					localVarArr[j] = new int[] {0, codeLength, nameIndexMap.get("p" + (j-1)), nameIndexMap.get(args[j-1]), j};
-				}
-				
-				int stacks = args.length + 1;
-				MemberInfo init = generateMethod(nameIndexMap, classDesc, m.getName(), m.getDesc(), args, stacks, stacks, cattCode, lineIndex, 1, 4, localVarArr);
-				lineIndex += 4;
-				methods[methodOff++] = init;
-			}
-		}
-		/**
-		 * submit here
-		 * */
-		int submitMethodIndex = index;
-		ConstantMemberRef submitRef = new ConstantMemberRef(ConstantInfo.CONSTANT_Methodref);
-		submitRef.setClassIndex(index+1);
-		submitRef.setNameAndTypeIndex(index+3);
-		constants[index++] = submitRef;
-
-		ConstantClass submitClass = new ConstantClass();
-		submitClass.setNameIndex(index + 1);
-		constants[index++] = submitClass;
-
-		ConstantUtf8 submitClassNameUtf8 = new ConstantUtf8();
-		submitClassNameUtf8.setValue(THREADPOOL_CLASS);
-		nameIndexMap.put(THREADPOOL_CLASS, index);
-		constants[index++] = submitClassNameUtf8;
-		
-		ConstantNameAndType submitType = new ConstantNameAndType();
-		submitType.setNameIndex(index + 1);
-		submitType.setDescIndex(index + 2);
-		constants[index++] = submitType;
-		
-		if(nameIndexMap.containsKey("submit")) {
-			submitType.setNameIndex(nameIndexMap.get("submit"));
-		} else {
-			ConstantUtf8 submitName = new ConstantUtf8();
-			submitName.setValue("submit");
-			constants[index++] = submitName;
-		}
-
-		ConstantUtf8 submitDescName = new ConstantUtf8();
-		submitDescName.setValue("("+SUBMIT_TASK_TYPE+")V");
-		nameIndexMap.put(submitDescName.getValue(), index);
-		constants[index++] = submitDescName;
-		
-		int[] innerClassCount = new int[16];
-		int innerClassOff = 0;
 		for(int i = 0; i < overrideMethods.length; i++) {
+			
+			String methodName =  overrideMethods[i], methodDesc = overrideMethodDescs[i];
+			String proxyMethodName = "super$"+methodName;
 
-			String methodName = overrideMethods[i], methodDesc = overrideMethodDescs[i];
-			String[] args = parseMethodDesc(methodDesc);
+			String taskRawClassName = DescriptorUtil.replaceDot2Slash(taskClassName + (i + 1));
+			cp.addClass(taskRawClassName);
 			
 			/**
-			 * task class here
+			 * add method impl.super$methodName(args)V {try{super.methodName();}catch(Exception e){e.printStackTrace();}}
 			 * */
-			int taskClassIndex = index;
-			innerClassCount[innerClassOff++] = index;
-			ConstantClass taskClass = new ConstantClass();
-			taskClass.setNameIndex(index + 1);
-			constants[index++] = taskClass;
-
-			ConstantUtf8 taskClassNameUtf8 = new ConstantUtf8();
-			taskClassNameUtf8.setValue(rawTaskClassName + innerClassOff);
-			nameIndexMap.put(taskClassNameUtf8.getValue(), index);
-			constants[index++] = taskClassNameUtf8;
-
-			int taskClassInitIndex = index;
-			ConstantMemberRef taskInitRef = new ConstantMemberRef(ConstantInfo.CONSTANT_Methodref);
-			taskInitRef.setClassIndex( index - 2);
-			taskInitRef.setNameAndTypeIndex( index + 1);
-			constants[index++] = taskInitRef;
+			int superMethodIndex = cp.addMethod(methodName, methodDesc, this.superRawClassName);
+			CodeAttributeWriter writer = CodeAttributeWriter.of(cp.findName("Code"));
+			writer.addInstruction("aload_0");
 			
-			ConstantNameAndType taskType = new ConstantNameAndType();
-			taskType.setNameIndex(consIndex);
-			taskType.setDescIndex( index + 1);
-			constants[index++] = taskType;
-			
-			
-			String taskParamTypeName = "("+this.classDesc;
-			for(String arg: args) {
-				taskParamTypeName += arg;
+			String[] args = DescriptorUtil.methodDescToArgDescs(methodDesc);
+			int slot = 1;
+			int exStart = 0, exEnd = 0, exTarget = 0, exType = exClassIndex;
+			for(int j = 0; j < args.length; j++) {
+				slot = loadParamCode(writer, args[j], slot);
 			}
-			taskParamTypeName += ")V";
-			if(nameIndexMap.containsKey(taskParamTypeName)) {
-				taskType.setDescIndex( nameIndexMap.get(taskParamTypeName));
+			writer.addInstruction16("invokespecial", superMethodIndex);
+			exEnd = writer.currentPc();
+			writer.addInstruction16("goto", 8);
+			exTarget = writer.currentPc();
+			if(slot > 3) {
+				writer.addInstruction8("astore", slot);
 			} else {
-				ConstantUtf8 taskParamName = new ConstantUtf8();
-				taskParamName.setValue(taskParamTypeName);
-				nameIndexMap.put(taskParamTypeName, index);
-				constants[index++] = taskParamName;
+				writer.addInstruction("astore_" + slot);
 			}
-			
-			String superOverName = generateSuperOverMethodName(methodName);
-			if(!nameIndexMap.containsKey(superOverName)) {
-				ConstantUtf8 mName = new ConstantUtf8();
-				mName.setValue(superOverName);
-				nameIndexMap.put(superOverName, index);
-				constants[index++] = mName;
-			}
-			
-			
-			int mNameIndex = index;
-			if(!nameIndexMap.containsKey(methodName)) {
-				ConstantUtf8 mName = new ConstantUtf8();
-				mName.setValue(methodName);
-				nameIndexMap.put(methodName, index);
-				constants[index++] = mName;
+			if(slot > 3) {
+				writer.addInstruction8("aload", slot);
+				slot++;
 			} else {
-				mNameIndex = nameIndexMap.get(methodName);
+				writer.addInstruction("aload_" + slot);
 			}
+			writer.addInstruction16("invokevirtual", exMethodIndex);
+			writer.addInstruction("return");
 			
-			int mDescIndex = index;
-			if(!nameIndexMap.containsKey(methodDesc)) {
-				ConstantUtf8 mdesc = new ConstantUtf8();
-				mdesc.setValue(methodDesc);
-				nameIndexMap.put(methodDesc, index);
-				constants[index++] = mdesc;
-			} else {
-				mDescIndex = nameIndexMap.get(methodDesc);
-			}
+			CodeAttribute codeAttr = writer.toCodeAttribute();
+			codeAttr.setExceptionTable(new ExceptionTable[] {new ExceptionTable(exStart, exEnd, exTarget, exType)});
 			
-			int superMethodRef = index;
-			ConstantMemberRef mref = new ConstantMemberRef(ConstantInfo.CONSTANT_Methodref);
-			mref.setClassIndex( superClassIndex);
-			mref.setNameAndTypeIndex( index+1);
-			constants[index++] = mref;
+			StackMapAttributeWriter stackMapWriter = StackMapAttributeWriter.of(stackMapIndex);
+			stackMapWriter.add((new StackMapEntry(72)).addFrame(7, exClassIndex, 0));
+			stackMapWriter.add((new StackMapEntry(4)));
+			
+			codeAttr.setAttributes(new AttributeInfo[] {stackMapWriter.toStackMapAttribute()});
+			
+			newcls.addMethod(proxyMethodName, args, "V", codeAttr);
+			
 
-			ConstantNameAndType mnt = new ConstantNameAndType();
-			mnt.setNameIndex(mNameIndex);
-			mnt.setDescIndex(mDescIndex);
-			constants[index++] = mnt;
-			
-			int p = 0;
-			for(String arg: args) {
-				if(!nameIndexMap.containsKey(arg)) {
-					ConstantUtf8 argType = new ConstantUtf8();
-					argType.setValue(arg);
-					nameIndexMap.put(arg, index);
-					constants[index++] = argType;
-				}
-				String argName = "p" + p;
-				if(!nameIndexMap.containsKey(argName)) {
-					ConstantUtf8 argNameType = new ConstantUtf8();
-					argNameType.setValue(argName);
-					nameIndexMap.put(argName, index);
-					constants[index++] = argNameType;
-				}
-				p++;
-			}
-			
-			
-			
 			/**
-			 * async methods
+			 * add override method impl.methodName(args)V {pool.submit(new implTask(this, args));}
 			 * */
-			{
-				int codeLength = 0;
-				if(args.length > 3) {
-					// alod_0: 1byte load 0~3: 3bytes, (load+index)*(args - 3): (args-3)*2 bytes, invoke: 3bytes, return 1byte
-					codeLength = 9 + 3 + (args.length - 3) * 2 + 7;
-				} else {
-					// alod_0: 1byte load 0~3: 3bytes, invoke: 3bytes, return 1byte
-					codeLength = 9 + args.length + 7;
-				}
-				byte[] cattCode = new byte[codeLength];
-				cattCode[0] = InstructionTable.getInstructionCode("aload_0");
-				cattCode[1] = InstructionTable.getInstructionCode("getfield");
-				cattCode[2] = (byte) ((poolIndex >> 8) & 0xff);
-				cattCode[3] = (byte) (poolIndex & 0xff);
-				cattCode[4] = InstructionTable.getInstructionCode("new");
-				cattCode[5] = (byte) ((taskClassIndex >> 8) & 0xff);
-				cattCode[6] = (byte) (taskClassIndex & 0xff);
-				cattCode[7] = InstructionTable.getInstructionCode("dup");
-				cattCode[8] = InstructionTable.getInstructionCode("aload_0");
-				int opIndex = 9;
-				for(int j = 0; j < args.length; j++) {
-					byte[] codes = InstructionTable.decodeLoadIns(args[j],  j);
-					if(codes.length == 1) {
-						cattCode[opIndex++] = codes[0];
-					}
-					if(codes.length == 2) {
-						cattCode[opIndex++] = codes[0];
-						cattCode[opIndex++] = codes[1];
-					}
-				}
-				
-				cattCode[opIndex++] = InstructionTable.getInstructionCode("invokespecial");
-				cattCode[opIndex++] = (byte) ((taskClassInitIndex >> 8) & 0xff);
-				cattCode[opIndex++] = (byte) (taskClassInitIndex & 0xff);
-				cattCode[opIndex++] = InstructionTable.getInstructionCode("invokevirtual");
-				cattCode[opIndex++] = (byte) ((submitMethodIndex >> 8) & 0xff);
-				cattCode[opIndex++] = (byte) (submitMethodIndex & 0xff);
-				cattCode[opIndex++] = InstructionTable.getInstructionCode("return");
-				
-				int[][] localVarArr = new int[args.length + 1][];
-				localVarArr[0] = new int[] {0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get(classDesc), 0};
-				for(int j = 1; j < localVarArr.length; j++) {
-					localVarArr[j] = new int[] {0, codeLength, nameIndexMap.get("p" + (j-1)), nameIndexMap.get(args[j-1]), j};
-				}
-				
-				int stacks = args.length + 4, locals = args.length + 1;
-				MemberInfo method = generateMethod(nameIndexMap, classDesc, methodName, methodDesc, args, stacks, locals, cattCode, lineIndex, 5, 8, localVarArr);
-				lineIndex += 8;
-				methods[methodOff++] = method;
-			}
+
+			String[] taskInitArgs = new String[args.length + 1];
+			taskInitArgs[0] = "L" + this.rawClassName + ";";
+			System.arraycopy(args, 0, taskInitArgs, 1, args.length);
+			// add invoke new implTask(this, args);
+			int taskMethodIndex = cp.addMethod("<init>", DescriptorUtil.getMethodDescription(taskInitArgs, "V"), taskRawClassName);
 			
-			
-			/**
-			 * super methods
-			 * */
-			{
-				int codeLength = 0;
-				if(args.length > 3) {
-					codeLength = 1 + 3 + (args.length - 3) * 2 + 4;
-				} else {
-					codeLength = 1 + args.length + 4;
-				}
-				byte[] cattCode = new byte[codeLength];
-				cattCode[0] = InstructionTable.getInstructionCode("aload_0");
-				int opIndex = 1;
-				for(int j = 0; j < args.length; j++) {
-					byte[] codes = InstructionTable.decodeLoadIns(args[j],  j);
-					if(codes.length == 1) {
-						cattCode[opIndex++] = codes[0];
-					}
-					if(codes.length == 2) {
-						cattCode[opIndex++] = codes[0];
-						cattCode[opIndex++] = codes[1];
-					}
-				}
-				cattCode[opIndex++] = InstructionTable.getInstructionCode("invokespecial");
-				cattCode[opIndex++] = (byte) ((superMethodRef >> 8) & 0xff);
-				cattCode[opIndex++] = (byte) (superMethodRef & 0xff);
-				cattCode[opIndex++] = InstructionTable.getInstructionCode("return");
-
-				int[][] localVarArr = new int[args.length + 1][];
-				localVarArr[0] = new int[] {0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get(classDesc), 0};
-				for(int j = 1; j < localVarArr.length; j++) {
-					localVarArr[j] = new int[] {0, codeLength, nameIndexMap.get("p" + (j-1)), nameIndexMap.get(args[j-1]), j};
-				}
-				
-				int stacks = args.length + 1, locals = args.length + 1;
-				MemberInfo method = generateMethod(nameIndexMap, classDesc, superOverName, methodDesc, args, stacks, locals, cattCode, lineIndex, 1, 4, localVarArr);
-				lineIndex += 4;
-				methods[methodOff++] = method;
+			CodeAttributeWriter overrideWriter = CodeAttributeWriter.of(cp.findName("Code"));
+			overrideWriter.addInstruction16("new", cp.findClass(taskRawClassName))
+				.addInstruction("dup")
+				.addInstruction("aload_0");
+			slot = 1;
+			for(int j = 0; j < args.length; j++) {
+				slot = loadParamCode(overrideWriter, args[j], slot);
 			}
-		}
-		newcls.setMethods(Arrays.copyOfRange(methods, 0, methodOff));
-		
-		MemberInfo[] fields = new MemberInfo[1];
-		fields[0] = new MemberInfo();
-		fields[0].setName(POOL_NAME);
-		fields[0].setDesc(THREADPOOL_TYPE);
-		fields[0].setAccessFlags(Modifier.PROTECTED);
-		fields[0].setNameIndex(nameIndexMap.get(POOL_NAME));
-		fields[0].setDescriptorIndex(nameIndexMap.get(THREADPOOL_TYPE));
-		fields[0].setAttributes(new AttributeInfo[0]);
-		newcls.setFields(fields);
-
-		int sourceIndex = index;
-		ConstantUtf8 source = new ConstantUtf8();
-		source.setValue("SourceFile");
-		constants[index++] = source;
-
-		int sourceNameIndex = index;
-		ConstantUtf8 sourceName = new ConstantUtf8();
-		sourceName.setValue(newcls.getSimpleName()+".java");
-		constants[index++] = sourceName;
-
-		int innerClassRawNameIndex = index;
-		ConstantUtf8 innerClass = new ConstantUtf8();
-		innerClass.setValue("InnerClasses");
-		constants[index++] = innerClass;
-		
-		ConstantPool cp = new ConstantPool();
-		cp.setCpInfo(Arrays.copyOfRange(constants, 0, index));
-		cp.setConstantPoolCount(cp.getCpInfo().length);
-		newcls.setConstantPool(cp);
-		
-		ClassEnd end = new ClassEnd();
-		end.setSourceLen(2);
-		end.setSourceIndex(sourceIndex);
-		end.setSourceNop(2);
-		end.setSourceNameIndex(sourceNameIndex);
-		if(innerClassOff > 0) {
-			end.setInnerClassRawNameIndex(innerClassRawNameIndex);
-			end.setInnerClassLength(2 + innerClassOff * 8);
-			end.setInnerClassCount(innerClassOff);
-			int[][] innerClassTable = new int[innerClassOff][3];
-			end.setInnerClassTable(innerClassTable);
-			for(int i = 0; i < innerClassOff; i++) {
-				innerClassTable[i][0] = innerClassCount[i];
-				innerClassTable[i][1] = 0;
-				innerClassTable[i][2] = 0;
-			}
-		}
-		newcls.setClassEnd(end);
-		return newcls;
-	}
-	
-	private ClassBytecode generateAsyncTask(String curclsName, String methodName, String methodDesc) {
-
-		String superOverMethodName = generateSuperOverMethodName(methodName);
-		String[] args = parseMethodDesc(methodDesc);
-		
-		ClassBytecode newcls = new ClassBytecode();
-		newcls.setClassName(curclsName);
-		newcls.setMagic(superCls.getMagic());
-		newcls.setMinorVersion(superCls.getMinorVersion());
-		newcls.setMajorVersion(superCls.getMajorVersion());
-		newcls.setAccessFlag(superCls.getAccessFlag());
-		newcls.setClassIndex(1);
-		newcls.setSuperIndex(3);
-		newcls.setInterfaceCount(1);
-		newcls.setInterfaceIndexArr(new int[] {5});
-
-		Map<String, Integer> nameIndexMap = new HashMap<>(128);
-		Map<String, Integer> fieldIndexMap = new HashMap<>(128);
-		Map<String, Integer> classIndexMap = new HashMap<>(128);
-		
-		int index = 1;
-		ConstantInfo[] constants = new ConstantInfo[256];
-		
-		ConstantClass clazzInfo = new ConstantClass();
-		clazzInfo.setNameIndex(2);
-		classIndexMap.put(newcls.getRawClassName(), index);
-		constants[index++] = clazzInfo;
-		
-		ConstantUtf8 clazzUtf8Info = new ConstantUtf8();
-		clazzUtf8Info.setValue(newcls.getRawClassName());
-		constants[index++] = clazzUtf8Info;
-
-		ConstantClass objectInfo = new ConstantClass();
-		objectInfo.setNameIndex(4);
-		classIndexMap.put(OBJECT_CLASS, index);
-		constants[index++] = objectInfo;
-		
-		ConstantUtf8 objectUtf8Info = new ConstantUtf8();
-		objectUtf8Info.setValue(OBJECT_CLASS);
-		constants[index++] = objectUtf8Info;
-		
-		ConstantClass superInfo = new ConstantClass();
-		superInfo.setNameIndex(6);
-		classIndexMap.put(SUBMIT_TASK_CLASS, index);
-		constants[index++] = superInfo;
-		
-		ConstantUtf8 superUtf8Info = new ConstantUtf8();
-		superUtf8Info.setValue(SUBMIT_TASK_CLASS);
-		constants[index++] = superUtf8Info;
-		
-		
-		ConstantUtf8 curClassTypeName = new ConstantUtf8();
-		curClassTypeName.setValue("L"+newcls.getRawClassName()+";");
-		nameIndexMap.put("L"+newcls.getRawClassName()+";", index);
-		constants[index++] = curClassTypeName;
-		
-		int taskFieldNameIndex = index;
-		ConstantUtf8 fieldUtf8 = new ConstantUtf8();
-		fieldUtf8.setValue(TASK_FIELD_NAME);
-		nameIndexMap.put(TASK_FIELD_NAME, index);
-		constants[index++] = fieldUtf8;
-		
-		int rawClassNameIndex = index;
-		ConstantUtf8 fieldClsUtf8 = new ConstantUtf8();
-		fieldClsUtf8.setValue(rawClassName);
-		constants[index++] = fieldClsUtf8;
-
-		int taskFieldDescIndex = index;
-		ConstantUtf8 fieldClsTypeUtf8 = new ConstantUtf8();
-		fieldClsTypeUtf8.setValue(classDesc);
-		nameIndexMap.put(classDesc, index);
-		constants[index++] = fieldClsTypeUtf8;
-		
-		ConstantMemberRef fieldRef = new ConstantMemberRef(ConstantInfo.CONSTANT_Fieldref);
-		fieldRef.setClassIndex(1);
-		fieldRef.setNameAndTypeIndex(index + 1);
-		fieldIndexMap.put(TASK_FIELD_NAME, index);
-		constants[index++] = fieldRef;
-		
-		ConstantNameAndType fieldNameType = new ConstantNameAndType();
-		fieldNameType.setNameIndex(taskFieldNameIndex);
-		fieldNameType.setDescIndex(taskFieldDescIndex);
-		constants[index++] = fieldNameType;
-		
-		int p = 0;
-		for(String arg: args) {
-			if(!nameIndexMap.containsKey(arg)) {
-				ConstantUtf8 argType = new ConstantUtf8();
-				argType.setValue(arg);
-				nameIndexMap.put(arg, index);
-				constants[index++] = argType;
-			}
-			String argName = "p" + p;
-			if(!nameIndexMap.containsKey(argName)) {
-				ConstantUtf8 argNameType = new ConstantUtf8();
-				argNameType.setValue(argName);
-				nameIndexMap.put(argName, index);
-				constants[index++] = argNameType;
-			}
-
-			ConstantMemberRef fRef = new ConstantMemberRef(ConstantInfo.CONSTANT_Fieldref);
-			fRef.setClassIndex( 1);
-			fRef.setNameAndTypeIndex( index + 1);
-			fieldIndexMap.put(argName, index);
-			constants[index++] = fRef;
-			
-			ConstantNameAndType fNameType = new ConstantNameAndType();
-			fNameType.setNameIndex(nameIndexMap.get(argName));
-			fNameType.setDescIndex( nameIndexMap.get(arg));
-			constants[index++] = fNameType;
-			p++;
-		}
-		
-		//define $ArcherTask1.<init>(args) utf8
-		int initConsNameIndex = index;
-		ConstantUtf8 consName = new ConstantUtf8();
-		consName.setValue("<init>");
-		nameIndexMap.put("<init>", index);
-		constants[index++] = consName;
-
-		String consDescStr = "(" + classDesc;
-		for(String arg: args) {
-			consDescStr += arg;
-		}
-		consDescStr += ")V";
-		ConstantUtf8 consDesc = new ConstantUtf8();
-		consDesc.setValue(consDescStr);
-		nameIndexMap.put(consDescStr, index);
-		constants[index++] = consDesc;
-
-		ConstantUtf8 runDesc = new ConstantUtf8();
-		runDesc.setValue("()V");
-		nameIndexMap.put("()V", index);
-		constants[index++] = runDesc;
-
-		int callSuperIndex = index;
-		ConstantMemberRef callSuperRef = new ConstantMemberRef(ConstantInfo.CONSTANT_Methodref);
-		callSuperRef.setClassIndex(3);
-		callSuperRef.setNameAndTypeIndex(index + 1);
-		constants[index++] = callSuperRef;
-
-		ConstantNameAndType superCallnt = new ConstantNameAndType();
-		superCallnt.setNameIndex(initConsNameIndex);
-		superCallnt.setDescIndex(index - 2);
-		constants[index++] = superCallnt;
-
-		ConstantUtf8 insCallName = new ConstantUtf8();
-		insCallName.setValue(methodName);
-		nameIndexMap.put(methodName, index);
-		constants[index++] = insCallName;
-		
-		// define $impl.super$call(args)
-		ConstantClass insCallClass = new ConstantClass();
-		insCallClass.setNameIndex(rawClassNameIndex);
-		classIndexMap.put(rawClassName, index);
-		constants[index++] = insCallClass;
-		
-		int insCallmIndex = index;
-		ConstantMemberRef insCallRef = new ConstantMemberRef(ConstantInfo.CONSTANT_Methodref);
-		insCallRef.setClassIndex( index - 1);
-		insCallRef.setNameAndTypeIndex( index + 1);
-		constants[index++] = insCallRef;
-
-		ConstantNameAndType insCallnt = new ConstantNameAndType();
-		insCallnt.setNameIndex(index + 1);
-		insCallnt.setDescIndex( index + 2);
-		constants[index++] = insCallnt;
-
-		ConstantUtf8 insSuperCallName = new ConstantUtf8();
-		insSuperCallName.setValue(superOverMethodName);
-		nameIndexMap.put(superOverMethodName, index);
-		constants[index++] = insSuperCallName;
-
-		ConstantUtf8 insCallDesc = new ConstantUtf8();
-		insCallDesc.setValue(methodDesc);
-		nameIndexMap.put(methodDesc, index);
-		constants[index++] = insCallDesc;
-		
-		//define run()
-		ConstantUtf8 runName = new ConstantUtf8();
-		runName.setValue("run");
-		nameIndexMap.put("run", index);
-		constants[index++] = runName;
-		
-		
-		ConstantUtf8 mcode = new ConstantUtf8();
-		mcode.setValue("Code");
-		nameIndexMap.put("Code", index);
-		constants[index++] = mcode;
-
-		ConstantUtf8 lnt = new ConstantUtf8();
-		lnt.setValue("LineNumberTable");
-		nameIndexMap.put("LineNumberTable", index);
-		constants[index++] = lnt;
-
-		ConstantUtf8 lvt = new ConstantUtf8();
-		lvt.setValue("LocalVariableTable");
-		nameIndexMap.put("LocalVariableTable", index);
-		constants[index++] = lvt;
-		
-
-		ConstantUtf8 thi = new ConstantUtf8();
-		thi.setValue(THIS_NAME);
-		nameIndexMap.put(THIS_NAME, index);
-		constants[index++] = thi;
-		
-
-		ConstantUtf8 thiType = new ConstantUtf8();
-		thiType.setValue("L"+newcls.getRawClassName()+";");
-		nameIndexMap.put(thiType.getValue(), index);
-		constants[index++] = thiType;
-		
-		
-		MemberInfo[] methods = new MemberInfo[2];
-		int lineIndex = 12 + args.length * 2;
-		
-		/**
-	     * constructor methods
-	     * */
-		{
-
-			int codeLength = 0;
-			if(args.length > 2) {
-				// alod_0: 1byte load 0~3: 3bytes, (load+index)*(args - 3): (args-3)*2 bytes, invoke: 3bytes, return 1byte
-				codeLength = 5 + 2 * 3 + (args.length - 2) * (5 + 1) + 5;
+			overrideWriter.addInstruction16("invokespecial", taskMethodIndex);
+			if(slot > 3) {
+				overrideWriter.addInstruction8("astore", slot);
 			} else {
-				// alod_0: 1byte load 0~3: 3bytes, invoke: 3bytes, return 1byte
-				codeLength = 5 + args.length * 5 + 5;
+				overrideWriter.addInstruction("astore_" + slot);
 			}
-			byte[] cattCode = new byte[codeLength];
-			int opIndex = 0;
-			cattCode[opIndex++] = InstructionTable.getInstructionCode("aload_0");
-			cattCode[opIndex++] = InstructionTable.getInstructionCode("invokespecial");
-			cattCode[opIndex++] = (byte) ((callSuperIndex >> 8) & 0xff);
-			cattCode[opIndex++] = (byte) (callSuperIndex & 0xff);
-			cattCode[opIndex++] = InstructionTable.getInstructionCode("aload_0");
-			cattCode[opIndex++] = InstructionTable.getInstructionCode("aload_1");
-			cattCode[opIndex++] = InstructionTable.getInstructionCode("putfield");
-			int fieldIndex = fieldIndexMap.get(TASK_FIELD_NAME);
-			cattCode[opIndex++] = (byte) ((fieldIndex >> 8) & 0xff);
-			cattCode[opIndex++] = (byte) (fieldIndex & 0xff);
-			for(int i = 0; i < args.length; i++) {
-				cattCode[opIndex++] = InstructionTable.getInstructionCode("aload_0");
-				byte[] codes = InstructionTable.decodeLoadIns(args[i],  i + 1);
-				if(codes.length == 1) {
-					cattCode[opIndex++] = codes[0];
-				}
-				if(codes.length == 2) {
-					cattCode[opIndex++] = codes[0];
-					cattCode[opIndex++] = codes[1];
-				}
-				cattCode[opIndex++] = InstructionTable.getInstructionCode("putfield");
-				int fIndex = fieldIndexMap.get("p"+i);
-				cattCode[opIndex++] = (byte) ((fIndex >> 8) & 0xff);
-				cattCode[opIndex++] = (byte) (fIndex & 0xff);
-				
+			overrideWriter.addInstruction("aload_0")
+				.addInstruction16("getfield", poolFieldIndex);
+			if(slot > 3) {
+				overrideWriter.addInstruction8("aload", slot);
+			} else {
+				overrideWriter.addInstruction("aload_" + slot);
 			}
-			cattCode[opIndex++] = InstructionTable.getInstructionCode("return");
+			slot++;
+			overrideWriter.addInstruction16("invokevirtual", submitIndex)
+				.addInstruction("return");
 
-			int[][] localVarArr = {{0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get("L"+newcls.getRawClassName()+";"), 0}};
-			
-			int stacks = 2, locals = args.length + 2;
-			methods[0] = generateMethod(nameIndexMap, "L"+newcls.getRawClassName()+";", "<init>", consDescStr , args, stacks, locals, cattCode, lineIndex, args.length + 1, args.length + 3, localVarArr);
-			lineIndex += args.length + 3;
+			newcls.addMethod(methodName, args, "V", overrideWriter.toCodeAttribute());
 		}
-		
-		/**
-		 * run
-		 * */
-		{
-
-			int codeLength = 4 + args.length * 4 + 4;
-			byte[] cattCode = new byte[codeLength];
-			int opIndex = 0;
-			cattCode[opIndex++] = InstructionTable.getInstructionCode("aload_0");
-			cattCode[opIndex++] = InstructionTable.getInstructionCode("getfield");
-			int fieldIndex = fieldIndexMap.get(TASK_FIELD_NAME);
-			cattCode[opIndex++] = (byte) ((fieldIndex >> 8) & 0xff);
-			cattCode[opIndex++] = (byte) (fieldIndex & 0xff);
-			
-			for(int i = 0; i < args.length; i++) {
-				cattCode[opIndex++] = InstructionTable.getInstructionCode("aload_0");
-				cattCode[opIndex++] = InstructionTable.getInstructionCode("getfield");
-				int fIndex = fieldIndexMap.get("p"+i);
-				cattCode[opIndex++] = (byte) ((fIndex >> 8) & 0xff);
-				cattCode[opIndex++] = (byte) (fIndex & 0xff);
-			}
-			cattCode[opIndex++] = InstructionTable.getInstructionCode("invokevirtual");
-			cattCode[opIndex++] = (byte) ((insCallmIndex >> 8) & 0xff);
-			cattCode[opIndex++] = (byte) (insCallmIndex & 0xff);
-			cattCode[opIndex++] = InstructionTable.getInstructionCode("return");
-
-			int[][] localVarArr = {{0, codeLength, nameIndexMap.get(THIS_NAME), nameIndexMap.get("L"+newcls.getRawClassName()+";"), 0}};
-			
-			int stacks = 2, locals = 1;
-			methods[1] = generateMethod(nameIndexMap, "L"+newcls.getRawClassName()+";", "run", "()V" , args, stacks, locals, cattCode, lineIndex, args.length + 1, args.length + 3, localVarArr);
-		}
-		
-
-		MemberInfo[] fields = new MemberInfo[args.length + 1];
-		
-		fields[0] = new MemberInfo();
-		fields[0].setName(TASK_FIELD_NAME);
-		fields[0].setDesc(classDesc);
-		fields[0].setAccessFlags(Modifier.PROTECTED);
-		fields[0].setNameIndex(nameIndexMap.get(TASK_FIELD_NAME));
-		fields[0].setDescriptorIndex(nameIndexMap.get(classDesc));
-		fields[0].setAttributes(new AttributeInfo[0]);
-		for(int i = 0; i < args.length; i++) {
-			String name = "p" + i;
-			fields[i + 1] = new MemberInfo();
-			fields[i + 1].setName(name);
-			fields[i + 1].setName(args[i]);
-			fields[i + 1].setAccessFlags(Modifier.PROTECTED);
-			fields[i + 1].setNameIndex(nameIndexMap.get(name));
-			fields[i + 1].setDescriptorIndex(nameIndexMap.get(args[i]));
-			fields[i + 1].setAttributes(new AttributeInfo[0]);
-		}
-		
-		int sourceIndex = index;
-		ConstantUtf8 source = new ConstantUtf8();
-		source.setValue("SourceFile");
-		constants[index++] = source;
-
-		int sourceNameIndex = index;
-		ConstantUtf8 sourceName = new ConstantUtf8();
-		sourceName.setValue(newcls.getSimpleName()+".java");
-		constants[index++] = sourceName;
-
-		int innerClassRawNameIndex = index;
-		ConstantUtf8 innerClass = new ConstantUtf8();
-		innerClass.setValue("InnerClasses");
-		constants[index++] = innerClass;
-		
-		ConstantPool cp = new ConstantPool();
-		cp.setCpInfo(Arrays.copyOfRange(constants, 0, index));
-		cp.setConstantPoolCount(cp.getCpInfo().length);
-		newcls.setConstantPool(cp);
-
-		newcls.setFields(fields);
-		newcls.setMethods(methods);
-		
-		ClassEnd end = new ClassEnd();
-		end.setSourceLen(2);
-		end.setSourceIndex(sourceIndex);
-		end.setSourceNop(2);
-		end.setSourceNameIndex(sourceNameIndex);
-		end.setInnerClassRawNameIndex(innerClassRawNameIndex);
-		end.setInnerClassLength(10);
-		end.setInnerClassCount(1);
-		int[][] innerClassTable = new int[1][3];
-		end.setInnerClassTable(innerClassTable);
-		innerClassTable[0][0] = 1;
-		innerClassTable[0][1] = 0;
-		innerClassTable[0][2] = 0;
-		newcls.setClassEnd(end);
 		
 		return newcls;
 	}
 	
-	private MemberInfo generateMethod(Map<String, Integer> nameIndexMap, String curClassType, String name, String desc, String args[], 
-			int stacks,  int locals, byte[] cattCode, int lineIndex, int lineLen, int gap, int[][] localVarArr) {
-
-		MemberInfo method = new MemberInfo();
-		method.setName(name);
-		method.setDesc(desc);
-		method.setAccessFlags(Modifier.PUBLIC);
-		method.setNameIndex(nameIndexMap.get(name));
-		method.setDescriptorIndex(nameIndexMap.get(desc));
-		AttributeInfo[] mattr = new AttributeInfo[1];
-		method.setAttributes(mattr);
-
-		CodeAttribute catt = new CodeAttribute();
-		mattr[0] = catt;
-		catt.setName("Code");
-		catt.setNameIndex(nameIndexMap.get("Code"));
-		catt.setMaxStack(stacks);
-		catt.setMaxLocals(locals);
-		catt.setCode(cattCode);
-		catt.setException(new byte[] {});
-		catt.setLength(20 + catt.getCodeLength());
-		AttributeInfo[] cattAttr = new AttributeInfo[2];
-		catt.setAttributes(cattAttr);
-		LineNumAttribute lna = new LineNumAttribute();
-		cattAttr[0] = lna;
-		lna.setName("LineNumberTable");
-		lna.setNameIndex(nameIndexMap.get("LineNumberTable"));
-		lna.setLength(10);
-		catt.setLength(catt.getLength() + lna.getLength() + 2);
-		lna.setLineNumTableCount(2);
-		lna.setLineNumTable(new int[][] {{0, lineIndex}, {catt.getCodeLength()-1, lineIndex+lineLen}});
-		lineIndex += gap;
-		LocalVarAttribute lva = new LocalVarAttribute();
-		cattAttr[1] = lva;
-		lva.setName("LocalVariableTable");
-		lva.setNameIndex(nameIndexMap.get("LocalVariableTable"));
-		lva.setLocalVarTableCount(localVarArr.length);
-		lva.setLength(2 + lva.getLocalVarTableCount() * 10);
-		catt.setLength(catt.getLength() + lva.getLength() + 2);
-		lva.setLocalVarTable(localVarArr);
-		
-		return method;
-	}
-	
-	
-	private boolean checkPrimitive(byte c) {
-		return c == 'Z' || c == 'B' || c == 'C' || c == 'S' || c == 'I' || c == 'J' || c == 'F' || c == 'D';
-	}
-	
-	private String[] parseMethodDesc(String desc) {
-		byte[] bs = desc.getBytes();
-		String[] types = new String[16];
-		int off = 0, typeS = 0, started = 0;
-		for(int i = 1; i < bs.length - 1; i++) {
-			if(bs[i] == ')') {
-				break ;
-			}
-			if(started == 0 && checkPrimitive(bs[i])) {
-				types[off++] = String.valueOf((char)bs[i]);
-				continue ;
-			}
-			if(started == 0 && bs[i] == '[') {
-				boolean ok = false;
-				typeS = i;
-				i++;
-				for(;i < bs.length - 1; i++) {
-					if(checkPrimitive(bs[i])) {
-						types[off++] = new String(Arrays.copyOfRange(bs, typeS, i+1));
-						ok = true;
-					}
+	private int loadParamCode(CodeAttributeWriter writer, String arg, int slot) {
+		if(arg.length() == 1) {
+			byte c = arg.getBytes()[0];
+			if(c == 'Z' || c == 'B' || c == 'C' || c == 'S' || c == 'I') {
+				if(slot == 1) {
+					writer.addInstruction("iload_1");
+					slot++;
+				} else if(slot == 2) {
+					writer.addInstruction("iload_1");
+					slot++;
+				} else if(slot == 3) {
+					writer.addInstruction("iload_1");
+					slot++;
+				} else {
+					writer.addInstruction8("iload", (byte)slot);
+					slot++;
 				}
-				if(!ok) {
-					throw new IllegalArgumentException("invalid method descriptor " + desc);
+			} else if(c == 'J') {
+				if(slot == 1) {
+					writer.addInstruction("lload_1");
+					slot += 2;
+				} else if(slot == 2) {
+					writer.addInstruction("lload_2");
+					slot += 2;
+				} else if(slot == 3) {
+					writer.addInstruction("lload_3");
+					slot += 2;
+				} else {
+					writer.addInstruction8("lload", slot);
+					slot += 2;
 				}
-				continue ;
+			} else if(c == 'F') {
+				if(slot == 1) {
+					writer.addInstruction("fload_1");
+					slot++;
+				} else if(slot == 2) {
+					writer.addInstruction("fload_2");
+					slot++;
+				} else if(slot == 3) {
+					writer.addInstruction("fload_3");
+					slot++;
+				} else {
+					writer.addInstruction8("fload", slot);
+					slot++;
+				}
+			} else if(c == 'D') {
+				if(slot == 1) {
+					writer.addInstruction("dload_1");
+					slot += 2;
+				} else if(slot == 2) {
+					writer.addInstruction("dload_2");
+					slot += 2;
+				} else if(slot == 3) {
+					writer.addInstruction("dload_3");
+					slot += 2;
+				} else  {
+					writer.addInstruction8("dload", slot);
+					slot += 2;
+				}
 			}
-			if(bs[i] == 'L') {
-				started = 1;
-				typeS = i;
-				continue ;
-			}
-			if(started == 1 && bs[i] == ';') {
-				started = 0;
-				types[off++] = new String(Arrays.copyOfRange(bs, typeS, i+1));
-				continue;
+			throw new BytecodeException("Invalid instruction load type " + arg);
+		} else {
+			if(slot == 1) {
+				writer.addInstruction("aload_1");
+				slot++;
+			} else if(slot == 2) {
+				writer.addInstruction("aload_2");
+				slot++;
+			} else if(slot == 3) {
+				writer.addInstruction("aload_3");
+				slot++;
+			} else {
+				writer.addInstruction8("aload", slot);
+				slot++;
 			}
 		}
-		return Arrays.copyOfRange(types, 0, off);
+		return slot;
 	}
-	
-	private static String generateSuperOverMethodName(String name) {
-		return "super$"+name;
-	}
-	
 }
 

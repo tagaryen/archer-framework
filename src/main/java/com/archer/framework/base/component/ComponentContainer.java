@@ -10,6 +10,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.sqlite.SQLiteConfig;
+
 import com.archer.framework.base.annotation.Async;
 import com.archer.framework.base.annotation.Component;
 import com.archer.framework.base.annotation.Config;
@@ -270,8 +272,11 @@ public class ComponentContainer {
 		for(Method m: methods) {
 			ConfigComponent cop = m.getAnnotation(ConfigComponent.class);
 			if(cop != null) {
-				if(!cop.enabled().isEmpty() && !conf.getBoolean(cop.enabled())) {
-					continue;
+				if(!cop.enabled().isEmpty()) {
+					Boolean val = conf.getBoolean(cop.enabled());
+					if(val == null || !val) {
+						continue;
+					}
 				}
 				String name = cop.name().isEmpty() ? m.getReturnType().getName() : cop.name();
 				try {

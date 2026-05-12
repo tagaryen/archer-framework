@@ -14,6 +14,7 @@ public class IgnoredClass {
 		IGNORED.add("com/archer/log/");
 		IGNORED.add("com/google/");
 		IGNORED.add("com/mysql/");
+		IGNORED.add("org/sqlite/");
 		IGNORED.add("META-INF/versions/");
 		IGNORED.add("com/zaxxer/");
 		IGNORED.add("org/slf4j/");

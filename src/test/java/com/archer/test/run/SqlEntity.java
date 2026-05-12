@@ -6,28 +6,16 @@ import java.time.LocalTime;
 
 import com.archer.framework.datasource.annotation.Entity;
 
-@Entity(tableName = "sqltest")
+@Entity(tableName = "alice_cat")
 public class SqlEntity {
 	
 	private Long id;
 	
-	private Long columnA;
+	private Long isCat;
 
-	private Integer columnB;
+	private Double tailLength;
 
-	private Float columnC;
-
-	private Double columnD;
-
-	private String columnE;
-
-	private String columnF;
-
-	private LocalDate columnG;
-
-	private LocalTime columnH;
-
-	private LocalDateTime columnI;
+	private Integer color;
 
 	public Long getId() {
 		return id;
@@ -37,76 +25,28 @@ public class SqlEntity {
 		this.id = id;
 	}
 
-	public Long getColumnA() {
-		return columnA;
+	public Long getIsCat() {
+		return isCat;
 	}
 
-	public void setColumnA(Long columnA) {
-		this.columnA = columnA;
+	public void setIsCat(Long isCat) {
+		this.isCat = isCat;
 	}
 
-	public Integer getColumnB() {
-		return columnB;
+	public Double getTailLength() {
+		return tailLength;
 	}
 
-	public void setColumnB(Integer columnB) {
-		this.columnB = columnB;
+	public void setTailLength(Double tailLength) {
+		this.tailLength = tailLength;
 	}
 
-	public Float getColumnC() {
-		return columnC;
+	public Integer getColor() {
+		return color;
 	}
 
-	public void setColumnC(Float columnC) {
-		this.columnC = columnC;
-	}
-
-	public Double getColumnD() {
-		return columnD;
-	}
-
-	public void setColumnD(Double columnD) {
-		this.columnD = columnD;
-	}
-
-	public String getColumnE() {
-		return columnE;
-	}
-
-	public void setColumnE(String columnE) {
-		this.columnE = columnE;
-	}
-
-	public String getColumnF() {
-		return columnF;
-	}
-
-	public void setColumnF(String columnF) {
-		this.columnF = columnF;
-	}
-
-	public LocalDate getColumnG() {
-		return columnG;
-	}
-
-	public void setColumnG(LocalDate columnG) {
-		this.columnG = columnG;
-	}
-
-	public LocalTime getColumnH() {
-		return columnH;
-	}
-
-	public void setColumnH(LocalTime columnH) {
-		this.columnH = columnH;
-	}
-
-	public LocalDateTime getColumnI() {
-		return columnI;
-	}
-
-	public void setColumnI(LocalDateTime columnI) {
-		this.columnI = columnI;
+	public void setColor(Integer color) {
+		this.color = color;
 	}
 
 }

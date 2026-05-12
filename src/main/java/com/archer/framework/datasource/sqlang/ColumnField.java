@@ -1,8 +1,8 @@
-package com.archer.framework.datasource.mysql;
+package com.archer.framework.datasource.sqlang;
 
 import java.lang.reflect.Field;
 
-public class ColumnField {
+public final class ColumnField {
 	private Column column;
 	private Field field;
 	

@@ -1,4 +1,4 @@
-package com.archer.framework.datasource.mysql;
+package com.archer.framework.datasource.sqlang;
 
 import com.archer.framework.datasource.exceptions.SqlException;
 

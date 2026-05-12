@@ -25,4 +25,9 @@ public class TestController {
 	public ResponseVO test2(@QueryParam(name = "queryP") String queryP, MultipartVO vo) {
 		return service.test2(queryP, vo);
 	}
+	
+	@Post(pattern = "/test")
+	public ResponseVO test3(@QueryParam(name = "queryP") String queryP) {
+		return service.test2(queryP, null);
+	}
 }

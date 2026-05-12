@@ -1,7 +1,7 @@
 package com.archer.test.run;
 
-import com.archer.framework.datasource.mysql.Repository;
+import com.archer.framework.datasource.sqlang.MysqlRepository;
 
-public class SqlRepository extends Repository<SqlEntity> {
+public class SqlRepository extends MysqlRepository<SqlEntity> {
 
 }

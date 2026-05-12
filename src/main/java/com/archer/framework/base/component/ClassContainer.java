@@ -145,20 +145,21 @@ public class ClassContainer {
                 	if(IgnoredClass.isIgnored(entry.getName())) {
                 		continue ;
                 	}
+                	String className = null;
                     try {
-                    	String className = entry.getName().replace('/', '.').substring(0, entry.getName().length() - 6);
+                    	className = entry.getName().replace('/', '.').substring(0, entry.getName().length() - 6);
                     	Class<?> clazz = Class.forName(className);
                         if(checkClass(clazz)) {
                             classes.add(clazz);
                         }
-                    } catch (ClassNotFoundException | NoClassDefFoundError ignore) {}
+                    } catch (Throwable e) {
+                    	e.printStackTrace();
+                    }
                 }
             }
         }
         return classes;
     }
-	
-	
 	
 	private boolean checkClass(Class<?> cls) {
 		if(ForwardComponent.class.isAssignableFrom(cls) && !cls.isInterface() && !Modifier.isAbstract(cls.getModifiers())) {
