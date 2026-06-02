@@ -20,13 +20,11 @@ import com.archer.net.http.ContentType;
 import com.archer.net.http.HttpRequest;
 import com.archer.net.http.HttpResponse;
 import com.archer.net.http.HttpStatus;
-import com.archer.net.http.HttpWrappedHandler;
+import com.archer.net.http.HttpUpgradeHandler;
 import com.archer.xjson.XJSON;
 
 @Component
-public final class HttpHandler extends HttpWrappedHandler {
-	
-	private static final String DEFAULT_ENCODING = "utf-8";
+public final class HttpHandler extends HttpUpgradeHandler {
 	
 	@Value(id = "archer.http.header", defaultVal = "[]")
 	List<String> configHeaders;
@@ -48,8 +46,7 @@ public final class HttpHandler extends HttpWrappedHandler {
 	int maxBody = -1;
 
 	@Override
-	public void handle(HttpRequest req, HttpResponse res) throws Exception {
-		res.setContentEncoding(DEFAULT_ENCODING);
+	public void handle(HttpRequest req, HttpResponse res) {
 		ApiPathVal apiPatch = matcher.parseApi(req.getMethod(), req.getUri());
 		if(apiPatch == null) {
 			responseNotFound(res);

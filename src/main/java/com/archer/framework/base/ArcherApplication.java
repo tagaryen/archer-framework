@@ -7,14 +7,18 @@ import com.archer.framework.base.util.PlatformUtil;
 
 public class ArcherApplication {
 	
-	public static void go(String[] args) {
-
+	public static void start(String[] args) {
+		StackTraceElement[] stacks = Thread.currentThread().getStackTrace();
+		if(stacks.length < 3) {
+			System.err.println("stack trace back can not found method main(String[])");
+			System.exit(0);
+		}
 		if(!PlatformUtil.isWindows() && !PlatformUtil.isLinux()) {
-			System.out.println("paltform " + System.getProperty("os.name") + " is not supported.");
+			System.err.println("paltform " + System.getProperty("os.name") + " is not supported.");
 			System.exit(0);
 		}	
 		Conf conf  = ConfLoader.load();
-		ClassContainer classes = new ClassContainer(conf);
+		ClassContainer classes = new ClassContainer(conf, stacks[2].getClassName());
 		classes.loadComponents();
 	}
 }

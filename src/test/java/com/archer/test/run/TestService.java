@@ -12,6 +12,8 @@ import com.archer.framework.base.annotation.Log;
 import com.archer.framework.base.annotation.Service;
 import com.archer.framework.datasource.sqlang.Where;
 import com.archer.log.Logger;
+import com.archer.test.run.TestService.RequestVO;
+import com.archer.test.run.TestService.ResponseVO;
 import com.archer.xjson.XJSONStatic;
 
 @Service
@@ -38,6 +40,20 @@ public class TestService implements TestServiceInter {
 	}
 	
 	public ResponseVO test2(String queryP, MultipartVO vo) {
+		
+		log.info("get in service test2, queryP = {}, req = {}", queryP, vo.req);
+
+		test3(queryP);
+		
+		ResponseVO res = new ResponseVO();
+		res.id = "thisID";
+		res.pathVar = queryP;
+		res.req = vo==null?vo.req:"hahah";
+		return res;
+	}
+	
+
+	public ResponseVO testAsync(String queryP, RequestVO vo) {
 		
 		log.info("get in service test2, queryP = {}, req = {}", queryP, vo.req);
 

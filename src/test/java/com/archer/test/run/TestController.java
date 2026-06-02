@@ -27,7 +27,7 @@ public class TestController {
 	}
 	
 	@Post(pattern = "/test")
-	public ResponseVO test3(@QueryParam(name = "queryP") String queryP) {
-		return service.test2(queryP, null);
+	public ResponseVO test3(@QueryParam(name = "queryP") String queryP, RequestVO vo) {
+		return service.testAsync(queryP, vo);
 	}
 }

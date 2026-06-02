@@ -9,4 +9,6 @@ public interface TestServiceInter {
 	public ResponseVO test(String id, String pathVar, RequestVO vo);
 	
 	public ResponseVO test2(String queryP, MultipartVO vo);
+
+	public ResponseVO testAsync(String queryP, RequestVO vo);
 }
