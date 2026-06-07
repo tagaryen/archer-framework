@@ -20,7 +20,6 @@ import com.archer.tools.bytecode.util.DescriptorUtil;
 
 public class AsyncProxy {
 	
-	private ClassBytecode superCls;
 	private String superClassName;
 	private String superRawClassName;
 	private MemberInfo[] superMethods;
@@ -30,12 +29,10 @@ public class AsyncProxy {
 	private String rawClassName;
 	private String taskClassSimpleName;
 	private String taskClassName;
-	private String rawTaskClassName;
 	private String asyncType = "L" + DescriptorUtil.replaceDot2Slash(Async.class.getName()) + ";";
 	
 	
 	public AsyncProxy(ClassBytecode superCls) {
-		this.superCls = superCls;
 		this.superClassName = superCls.getClassName();
 		this.superRawClassName = DescriptorUtil.replaceDot2Slash(this.superClassName);
 		this.superMethods = superCls.getMethods();
@@ -45,7 +42,6 @@ public class AsyncProxy {
 		this.rawClassName = DescriptorUtil.replaceDot2Slash(this.className);
 		this.taskClassSimpleName = superCls.getSimpleName() + "$ArcherTask";
 		this.taskClassName = superClassName + "$ArcherTask";
-		this.rawTaskClassName = DescriptorUtil.replaceDot2Slash(this.taskClassName);
 	}
 	
 	public Class<?> newAsyncClass() {

@@ -17,6 +17,7 @@ import com.archer.framework.web.exceptions.ParamException;
 import com.archer.framework.web.filter.FilterState;
 import com.archer.log.Logger;
 import com.archer.net.http.ContentType;
+import com.archer.net.http.HttpException;
 import com.archer.net.http.HttpRequest;
 import com.archer.net.http.HttpResponse;
 import com.archer.net.http.HttpStatus;
@@ -74,6 +75,8 @@ public final class HttpHandler extends HttpUpgradeHandler {
 		} catch(Exception e) {
 			if(e instanceof ParamException) {
 				responseServerError(res, "Invalid params");
+			} else if(e instanceof HttpException) {
+				responseServerError(res, HttpStatus.valueOf(((HttpException)e).getCode()));
 			} else {
 				responseServerError(res, "Internal Server Error");
 			}
@@ -98,20 +101,8 @@ public final class HttpHandler extends HttpUpgradeHandler {
 	}
 
 	@Override
-	public void handleException(HttpRequest req, HttpResponse res, Throwable t) {
+	public void handleException(Throwable t) {
 		t.printStackTrace();
-		
-		if(res.getStatus() == null) {
-			String body = "{" +
-					"\"server\": \"Archer Http Server\"," +
-					"\"time\": \"" + LocalDateTime.now().toString() + "\"," +
-					"\"status\": \"" + HttpStatus.SERVICE_UNAVAILABLE.getStatus() + "\"" +
-				"}";
-			
-			res.setStatus(HttpStatus.SERVICE_UNAVAILABLE);
-			res.setContentType(ContentType.APPLICATION_JSON);
-			res.sendContent(body.getBytes());
-		}
 	}
 	
 	private void responseNotFound(HttpResponse res) {
@@ -133,6 +124,17 @@ public final class HttpHandler extends HttpUpgradeHandler {
 				"\"reason\": \"" + reason + "\"" +
 			"}";
 		res.setStatus(HttpStatus.NOT_FOUND);
+		res.setContentType(ContentType.APPLICATION_JSON);
+		res.sendContent(body.getBytes());
+	}
+	
+	protected void responseServerError(HttpResponse res, HttpStatus status) {
+		String body = "{" +
+				"\"server\": \"Archer Http Server\"," +
+				"\"time\": \"" + LocalDateTime.now().toString() + "\"," +
+				"\"status\": \"" + status + "\"" +
+			"}";
+		res.setStatus(status);
 		res.setContentType(ContentType.APPLICATION_JSON);
 		res.sendContent(body.getBytes());
 	}

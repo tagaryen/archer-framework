@@ -26,8 +26,10 @@ import com.archer.framework.web.filter.AnnotationResponseFilter;
 import com.archer.framework.web.filter.FilterState;
 import com.archer.framework.web.util.MultipartUtil;
 import com.archer.net.http.ContentType;
+import com.archer.net.http.HttpException;
 import com.archer.net.http.HttpRequest;
 import com.archer.net.http.HttpResponse;
+import com.archer.net.http.HttpStatus;
 import com.archer.net.http.multipart.Multipart;
 import com.archer.net.http.multipart.MultipartParser;
 import com.archer.xjson.XJSON;
@@ -40,6 +42,8 @@ public class Api {
 	static final String PUT = "PUT";
 	static final String DELETE = "DELETE";
 	static final String OPTION = "OPTION";
+
+	static final String JSON = "application/json";
 	
 	public static final String OPTION_RES = "{\"OPTION\":\"ok\"}";
 	
@@ -294,7 +298,7 @@ public class Api {
 				if(body == null || body.length == 0) {
 					throw new ParamException("can not construct " + p.param().getParameterizedType().getTypeName() + " with empty body");
 				}
-				if(ContentType.APPLICATION_JSON.getName().equals(req.getContentType())) {
+				if(req.getContentType().startsWith(JSON)) {
 					String bodyStr;
 					try {
 						bodyStr = new String(body, req.getContentEncoding());
@@ -308,8 +312,7 @@ public class Api {
 						throw new ParamException("can not parse " + bodyStr + " to " + p.param().getParameterizedType().getTypeName(), e);
 					}
 					continue;
-				}
-				if(req.getContentType().startsWith(ContentType.MULTIPART_FORMDATA.getName())) {
+				} else if(req.getContentType().startsWith(ContentType.MULTIPART_FORMDATA.getName())) {
 					List<Multipart> multiparts;
 					try {
 						multiparts = MultipartParser.parse(req);
@@ -328,6 +331,8 @@ public class Api {
 					} catch (XJSONException e) {
 						throw new ParamException("can not parse " + json + " to " + p.param().getParameterizedType().getTypeName());
 					}
+				} else {
+					throw new HttpException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
 				}
 			} else {
 				String val = null;
