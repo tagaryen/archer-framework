@@ -40,7 +40,7 @@ public class ClassContainer {
 			components.loadForwardComponents();
 			components.loadAllComponents();
 			components.logger().info("Archer Application started in {}ms", timer.calculateCost());
-		} catch(Exception e) {
+		} catch(Throwable e) {
 			components.logger().error("{}", e.getLocalizedMessage());
 			e.printStackTrace();
 			components.logger().warn("Archer Application start failed");
